@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "pg": "^8.11.3"
+    "@prisma/adapter-pg": "^7.9.1",
+    "pg": "^8.22.0"
   }
 }

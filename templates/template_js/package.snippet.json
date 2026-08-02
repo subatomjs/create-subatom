@@ -1,6 +1,7 @@
 {
   "type": "module",
   "scripts": {
+    "build-schema": "node script/schema_builder.js",
     "dev": "node --watch main.js",
     "start": "node main.js"
   }

@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "sqlite3": "^5.1.6"
+    "@prisma/adapter-better-sqlite3": "^7.9.1",
+    "better-sqlite3": "^13.0.2"
   }
 }

@@ -2,6 +2,12 @@
 import fs from "fs-extra";
 import path from "node:path";
 import type { ProjectConfig } from "../types.js";
+import {
+  schemaContent,
+  prismaConfig,
+  prismaFileGenerate,
+} from "../constants/static_content.js";
+import { handlePrismaSchemaBuilder } from "../constants/schema_builder.js";
 
 const TEMPLATES_DIR: string = new URL("../../templates", import.meta.url)
   .pathname;
@@ -34,6 +40,17 @@ export async function copyTemplate(
     );
   }
 
+  // Prisma's schema.prisma ships with a placeholder provider — patch it now
+  // that both the base and database-specific copies are done.
+  if (config.orm === "prisma") {
+    await addPrismaConfig(
+      targetDir,
+      config.database,
+      config.language,
+      config.projectName,
+    );
+  }
+
   if (config.useRedis) {
     await copyIfExists(path.join(TEMPLATES_DIR, "redis"), targetDir, "redis");
   }
@@ -45,17 +62,6 @@ export async function copyTemplate(
   }
 }
 
-/**
- * Copies a template folder, but throws a clear, actionable error instead of
- * a raw ENOENT if the folder doesn't exist yet.
- *
- * IMPORTANT: every fragment gets copied into the SAME targetDir, and multiple
- * fragments can each ship their own package.snippet.json. If we copied that
- * file as-is, each fragment would silently overwrite the previous fragment's
- * snippet at the same path, and mergePackageJson would only ever see the
- * last one. So we exclude it from the bulk copy and copy it separately under
- * a name unique to this fragment (derived from `label`).
- */
 async function copyIfExists(
   src: string,
   dest: string,
@@ -78,6 +84,65 @@ async function copyIfExists(
     const uniqueName = `package.snippet.${slugify(label)}.json`;
     await fs.copy(snippetSrcPath, path.join(dest, uniqueName));
   }
+}
+
+async function addPrismaConfig(
+  targetDir: string,
+  database: ProjectConfig["database"],
+  language: ProjectConfig["language"],
+  projectName: ProjectConfig["projectName"],
+): Promise<void> {
+  const schemaPath = path.join(targetDir, "prisma", "schema.prisma");
+
+  if (!(await fs.pathExists(schemaPath))) {
+    throw new Error(
+      `Expected to find "${schemaPath}" after copying Prisma templates, but it's missing. ` +
+        `Check that orm/prisma/base/prisma/schema.prisma exists.`,
+    );
+  }
+
+
+  //! 1. Write boilerplate content of schema.prisma 
+  await fs.writeFile(schemaPath, schemaContent(database), "utf-8");
+
+
+  //! 2. Write prisma.config.js or prisma.config.ts file 
+  await fs.writeFile(
+    path.join(
+      targetDir,
+      `${language === "js" ? "prisma.config.js" : "prisma.config.ts"}`,
+    ),
+    prismaConfig(),
+    "utf-8",
+  );
+
+
+  //! 3. Write prisma.js or prisma.ts file 
+  await fs.writeFile(
+    path.join(
+      `${process.cwd()}/${projectName}`,
+      `${language === "js" ? "prisma.js" : "prisma.ts"}`,
+    ),
+    prismaFileGenerate(database),
+    "utf-8",
+  );
+
+
+  //! 4. Write schema builder file 
+  await fs.writeFile(
+    path.join(
+      `${process.cwd()}/${projectName}`,
+      "script",
+      `${language === "js" ? "schema_builder.js" : "schema_builder.js"}`,
+    ),
+    
+    handlePrismaSchemaBuilder(
+      `${process.cwd()}/${projectName}`,
+      database,
+      language,
+    ),
+    "utf-8",
+  );
 }
 
 function slugify(label: string): string {
