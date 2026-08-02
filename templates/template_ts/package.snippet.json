@@ -1,0 +1,13 @@
+{
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx main.ts",
+    "start": "node dist/main.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "@types/node": "^22.5.0",
+    "tsx": "^4.19.0"
+  }
+}

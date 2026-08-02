@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "drizzle-orm": "^0.33.0"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.24.0"
+  },
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  }
+}
