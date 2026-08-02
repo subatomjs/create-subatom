@@ -133,7 +133,7 @@ async function addPrismaConfig(
     path.join(
       `${process.cwd()}/${projectName}`,
       "script",
-      `${language === "js" ? "schema_builder.js" : "schema_builder.js"}`,
+      `${language === "js" ? "schema_builder.js" : "schema_builder.ts"}`,
     ),
     
     handlePrismaSchemaBuilder(

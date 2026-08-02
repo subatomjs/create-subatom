@@ -6,6 +6,7 @@ const handlePrismaSchemaBuilder = (
   language: "ts" | "js" | string,
 ) => {
   return `
+  ${language === "ts" ? '/// <reference types="node" />' : ""}
 import fs from "fs";
 import path from "path";
 
