@@ -1,17 +1,43 @@
-// create-subatom/tsconfig.json
 {
   "compilerOptions": {
     "target": "ES2022",
+    "lib": ["ES2022"],
+
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "outDir": "./dist",
+
+    "types": ["node"],
+
     "rootDir": "./src",
-    "declaration": false,   // CLI, not a library others import — no .d.ts needed
-    "sourceMap": false,
+    "outDir": "./dist",
+
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
     "strict": true,
+    "noImplicitAny": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    "forceConsistentCasingInFileNames": true,
+
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+
     "skipLibCheck": true,
-    "types": ["node"]
+
+    "removeComments": true,
+    "noEmitOnError": true,
+
+    "incremental": false
   },
-  "include": ["src/**/*.ts"]
+
+  "include": ["src"],
+
+  "exclude": ["dist", "node_modules", "playground", "tests", "templates"]
 }

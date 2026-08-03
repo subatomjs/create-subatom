@@ -45,7 +45,11 @@ export async function mergePackageJson(
     private: true,
     version: mergedVersion ?? "0.1.0",
     ...(description ? { description } : {}),
-    type: mergedType ?? (config.language === "ts" ? "module" : undefined),
+    ...((mergedType !== undefined)
+      ? { type: mergedType }
+      : config.language === "ts"
+      ? { type: "module" }
+      : {}),
     scripts: scripts ?? {},
     dependencies: sortKeys(dependencies ?? {}),
     devDependencies: sortKeys(devDependencies ?? {}),
