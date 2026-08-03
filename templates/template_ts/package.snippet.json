@@ -6,6 +6,9 @@
     "dev": "tsx main.ts",
     "start": "node dist/main.js"
   },
+  "dependencies": {
+    "subatom": "^0.1.0"
+  },
   "devDependencies": {
     "typescript": "^5.5.4",
     "@types/node": "^22.5.0",

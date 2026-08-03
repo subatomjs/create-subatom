@@ -1,9 +1,8 @@
-// Ensure 'console' is available in environments where the default lib
-// doesn't include the DOM/Console definitions.
-declare const console: { log(...args: any[]): void };
+import __env from "./src/config/__env.js";
+import server from "./src/server.js";
 
-function main() {
-  console.log("Hello world");
+async function main() {
+  server.listen(__env.PORT || 8080, __env.HOST, "test_pack");
 }
 
-main();
+await main();
