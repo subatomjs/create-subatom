@@ -1,6 +1,6 @@
 {
   "name": "create-subatom",
-  "version": "0.2.1",
+  "version": "0.3.1",
   "description": "CLI tool of subatom framework.",
   "types": "module",
   "bin": {

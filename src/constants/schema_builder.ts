@@ -53,7 +53,8 @@ for (const file of files) {
 }
 
 // Header
-const header = ${JSON.stringify(schemaContent(database))};
+// Cast database to any to satisfy schemaContent's expected SqlDatabase type
+const header = ${JSON.stringify(schemaContent(database as any))};
 
 // Write final schema.prisma
 fs.writeFileSync(outputFile, header + "\\n\\n" + combinedModules.trim());

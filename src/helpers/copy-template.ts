@@ -101,12 +101,12 @@ async function addPrismaConfig(
     );
   }
 
+  //! 1. Write boilerplate content of schema.prisma
+  database !== "mongodb"
+    ? await fs.writeFile(schemaPath, schemaContent(database), "utf-8")
+    : null;
 
-  //! 1. Write boilerplate content of schema.prisma 
-  await fs.writeFile(schemaPath, schemaContent(database), "utf-8");
-
-
-  //! 2. Write prisma.config.js or prisma.config.ts file 
+  //! 2. Write prisma.config.js or prisma.config.ts file
   await fs.writeFile(
     path.join(
       targetDir,
@@ -116,26 +116,26 @@ async function addPrismaConfig(
     "utf-8",
   );
 
+  //! 3. Write prisma.js or prisma.ts file
+  database !== "mongodb"
+    ? await fs.writeFile(
+        path.join(
+          `${process.cwd()}/${projectName}`,
+          `${language === "js" ? "prisma.js" : "prisma.ts"}`,
+        ),
+        prismaFileGenerate(database),
+        "utf-8",
+      )
+    : null;
 
-  //! 3. Write prisma.js or prisma.ts file 
-  await fs.writeFile(
-    path.join(
-      `${process.cwd()}/${projectName}`,
-      `${language === "js" ? "prisma.js" : "prisma.ts"}`,
-    ),
-    prismaFileGenerate(database),
-    "utf-8",
-  );
-
-
-  //! 4. Write schema builder file 
+  //! 4. Write schema builder file
   await fs.writeFile(
     path.join(
       `${process.cwd()}/${projectName}`,
       "script",
       `${language === "js" ? "schema_builder.js" : "schema_builder.ts"}`,
     ),
-    
+
     handlePrismaSchemaBuilder(
       `${process.cwd()}/${projectName}`,
       database,
