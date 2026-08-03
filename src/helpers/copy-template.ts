@@ -1,11 +1,18 @@
 // src/helpers/copy-template.ts
 import fs from "fs-extra";
 import path from "node:path";
-import type { ProjectConfig } from "../types.js";
+
+import type { Orm, ProjectConfig } from "../types.js";
 import {
   schemaContent,
   prismaConfig,
   prismaFileGenerate,
+  mongoDBConfig,
+  mongooseSchema,
+  prismaSchema,
+  envConfigForMongoose,
+  envConfigForPrisma,
+  mainFileContent,
 } from "../constants/static_content.js";
 import { handlePrismaSchemaBuilder } from "../constants/schema_builder.js";
 
@@ -48,7 +55,12 @@ export async function copyTemplate(
       config.database,
       config.language,
       config.projectName,
+      config.orm
     );
+  }
+
+  if (config.orm === "mongoose") {
+    await addMongooseConfig(targetDir, config.language, config.projectName, config.database, config.orm);
   }
 
   if (config.useRedis) {
@@ -86,13 +98,22 @@ async function copyIfExists(
   }
 }
 
+//TODO: 1. -------- PRISMA CONFIG --------
 async function addPrismaConfig(
   targetDir: string,
   database: ProjectConfig["database"],
   language: ProjectConfig["language"],
   projectName: ProjectConfig["projectName"],
+  orm: ProjectConfig["orm"]
 ): Promise<void> {
+  const modelFilePath = path.join(targetDir, "src", "models", "subatom.prisma");
+  const envSamplePath = path.join(targetDir, ".env.requirement");
   const schemaPath = path.join(targetDir, "prisma", "schema.prisma");
+  const configDir = path.join(targetDir, "src", "config");
+  const prisma_env_conf = path.join(
+    configDir,
+    language === "js" ? "__env.js" : "__env.ts",
+  );
 
   if (!(await fs.pathExists(schemaPath))) {
     throw new Error(
@@ -103,7 +124,7 @@ async function addPrismaConfig(
 
   //! 1. Write boilerplate content of schema.prisma
   database !== "mongodb"
-    ? await fs.writeFile(schemaPath, schemaContent(database), "utf-8")
+    ? await fs.writeFile(schemaPath, schemaContent(database, language), "utf-8")
     : null;
 
   //! 2. Write prisma.config.js or prisma.config.ts file
@@ -123,26 +144,131 @@ async function addPrismaConfig(
           `${process.cwd()}/${projectName}`,
           `${language === "js" ? "prisma.js" : "prisma.ts"}`,
         ),
-        prismaFileGenerate(database),
+        prismaFileGenerate(database, language),
         "utf-8",
       )
     : null;
 
-  //! 4. Write schema builder file
-  await fs.writeFile(
-    path.join(
-      `${process.cwd()}/${projectName}`,
-      "script",
-      `${language === "js" ? "schema_builder.js" : "schema_builder.ts"}`,
-    ),
+//! 4. Main file creation 
+      database !== "mongodb"
+    ? await fs.writeFile(
+        path.join(
+          `${process.cwd()}/${projectName}`,
+          `${language === "js" ? "main.js" : "main.ts"}`,
+        ),
+        mainFileContent(database, orm, language, projectName),
+        "utf-8",
+      )
+    : null;
 
-    handlePrismaSchemaBuilder(
-      `${process.cwd()}/${projectName}`,
-      database,
-      language,
-    ),
+  //! 5. Write schema builder file
+// 1. Define the directory and full file path clearly
+const scriptDir = path.join(process.cwd(), projectName, "script");
+const fileName = language === "js" ? "schema_builder.js" : "schema_builder.ts";
+const filePath = path.join(scriptDir, fileName);
+
+// 2. Ensure the directory exists (creates recursively if missing)
+await fs.mkdir(scriptDir, { recursive: true });
+
+// 3. Write the file safely
+await fs.writeFile(
+  filePath,
+  handlePrismaSchemaBuilder(
+    path.join(process.cwd(), projectName),
+    database,
+    language
+  ),
+  "utf-8"
+);
+
+  //! 5. Write .env.requirement — outputFile creates any missing parent dirs
+  const env_for_prisma = `
+DATABASE_URL = ""
+NODE_ENV="development"
+PORT = 8080
+HOST = 'localhost'
+`;
+  await fs.outputFile(envSamplePath, env_for_prisma, "utf-8");
+
+  //! 6. Write model file — outputFile creates any missing parent dirs
+  await fs.outputFile(modelFilePath, prismaSchema(), "utf-8");
+
+  //! 4. __env write
+  await fs.outputFile(prisma_env_conf, envConfigForPrisma(language), "utf-8");
+}
+
+
+
+
+
+
+
+
+
+
+
+//!(****************************************************************************************************************)
+
+//TODO 2. --------- MONGOOSE CONFIG ---------
+async function addMongooseConfig(
+  targetDir: string,
+  language: ProjectConfig["language"],
+  projectName: ProjectConfig['projectName'],
+  database: ProjectConfig['database'],
+  orm: ProjectConfig['orm']
+
+
+): Promise<void> {
+  const modelFilePath = path.join(
+    targetDir,
+    "src",
+    "models",
+    language === "js" ? "subAtom.model.js" : "subAtom.model.ts",
+  );
+  const envSamplePath = path.join(targetDir, ".env.requirement");
+  const configDir = path.join(targetDir, "src", "config");
+  const mongooseConfigPath = path.join(
+    configDir,
+    language === "js" ? "mongoConnect.js" : "mongoConnect.ts",
+  );
+
+  const mongooseEnvConfig = path.join(
+    configDir,
+    language === "js" ? "__env.js" : "__env.ts",
+  );
+
+  const env_for_mongoose = `MONGO_CONNECTION_STRING = ""
+  NODE_ENV="development"
+PORT = 8080
+HOST = 'localhost'
+`;
+
+  //! 1. Mongo connection config file inside src/config
+  await fs.outputFile(mongooseConfigPath, mongoDBConfig(language), "utf-8");
+
+  //! 2. .env.requirement
+  await fs.outputFile(envSamplePath, env_for_mongoose, "utf-8");
+
+  //! 3. Model file
+  await fs.outputFile(modelFilePath, mongooseSchema(language), "utf-8");
+
+  //! 4. __env write
+  await fs.outputFile(
+    mongooseEnvConfig,
+    envConfigForMongoose(language),
     "utf-8",
   );
+
+  //! 5. Main file creation 
+   await fs.writeFile(
+        path.join(
+          `${process.cwd()}/${projectName}`,
+          `${language === "js" ? "main.js" : "main.ts"}`,
+        ),
+        mainFileContent(database, orm, language, projectName),
+        "utf-8",
+      )
+
 }
 
 function slugify(label: string): string {

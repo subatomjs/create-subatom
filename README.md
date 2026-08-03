@@ -35,14 +35,3 @@ create-subatom/
 ├── package.json               # bin field points to dist/index.js
 └── tsconfig.json
 
-
-
-<!-- 7dHQbLDnRZQG6_23RqdE -->
-
-# Connect to Postgres via the shared session-mode pooler (used for migrations)
-DATABASE_URL="postgresql://postgres.ozohztffqawsdfjyrmtf:7dHQbLDnRZQG6_23RqdE@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres?schema=public"
-
-# postgresql://postgres.ozohztffqawsdfjyrmtf:7dHQbLDnRZQG6_23RqdE@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true
-
-
-"libsql://sqlitetestdb-peter-01029.aws-ap-south-1.turso.io"

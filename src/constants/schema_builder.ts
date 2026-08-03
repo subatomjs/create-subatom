@@ -1,3 +1,4 @@
+import { Language } from "../types.js";
 import { schemaContent } from "./static_content.js";
 
 const handlePrismaSchemaBuilder = (
@@ -54,7 +55,7 @@ for (const file of files) {
 
 // Header
 // Cast database to any to satisfy schemaContent's expected SqlDatabase type
-const header = ${JSON.stringify(schemaContent(database as any))};
+const header = ${JSON.stringify(schemaContent(database as any, language as Language))};
 
 // Write final schema.prisma
 fs.writeFileSync(outputFile, header + "\\n\\n" + combinedModules.trim());

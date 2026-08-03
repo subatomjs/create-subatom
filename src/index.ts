@@ -40,11 +40,24 @@ async function main() {
     process.exit(1);
   }
 
-  outro(
+  if(config.orm === "prisma" && config.database === "postgresql"){
+      outro(
+    pc.green(`Done! Next steps:\n\n`) +
+      pc.cyan(`  cd ${config.projectName}\n`) +
+      pc.yellow(`  npm run build-schema\n`) +
+      pc.blue(`  npm run db:generate\n`) +
+      pc.green(`  npm run db:migrate\n`) +
+      pc.cyan(`  npm run dev\n`),
+  );
+  }else{
+ outro(
     pc.green(`Done! Next steps:\n\n`) +
       pc.cyan(`  cd ${config.projectName}\n`) +
       pc.cyan(`  npm run dev\n`),
   );
+  }
+
+ 
 }
 
 main();
