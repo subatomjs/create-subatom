@@ -1,6 +1,6 @@
 {
   "name": "create-subatom",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "CLI tool of subatom framework.",
   "types": "module",
   "bin": {
@@ -19,7 +19,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-     "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
