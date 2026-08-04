@@ -1,7 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "build-schema": "ts-node script/schema_builder.ts",
+    "build-schema": "ts-node scripts/schema_builder.ts",
     "build": "tsc",
     "dev": "tsx main.ts",
     "start": "node dist/main.js"

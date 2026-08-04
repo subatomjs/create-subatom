@@ -13,11 +13,34 @@ type SqlDatabase = Exclude<Database, "mongodb">;
  *  - no `url` in the datasource block — the connection URL lives in
  *    prisma.config.ts, not the schema, as of v7
  */
+
+// .env create
+export function generateEnv(): string {
+  return `
+/// <reference types="node" />
+import * as fs from "fs";
+
+const source = ".env.requirement";
+const destination = ".env";
+
+if (!fs.existsSync(destination)) {
+  fs.copyFileSync(source, destination);
+  console.log("✅ Created .env from .env.requirement");
+} else {
+  console.log("ℹ️ .env already exists");
+}
+    
+    `;
+}
+
 export function schemaContent(
   database: SqlDatabase,
   language: Language,
 ): string {
-  if (language === "js" && database === "postgresql") {
+  if (
+    language === "js" &&
+    (database === "postgresql" || database === "mysql" || database === 'sqlite')
+  ) {
     return `
   generator client {
   provider = "prisma-client-js"
@@ -65,6 +88,7 @@ export default defineConfig({
 `;
 }
 
+// main.js || main.ts
 export function mainFileContent(
   database: Database,
   orm: Orm,
@@ -154,11 +178,11 @@ export function prismaFileGenerate(
 ): string {
   switch (database) {
     case "postgresql":
-      return postgresClientFile(database, language);
+      return postgresClientFile(language);
     case "mysql":
-      return mysqlClientFile();
+      return mysqlClientFile(language);
     case "sqlite":
-      return sqliteClientFile();
+      return sqliteClientFile(language);
     default: {
       const exhaustiveCheck: never = database;
       throw new Error(
@@ -168,10 +192,11 @@ export function prismaFileGenerate(
   }
 }
 
-function postgresClientFile(database: Database, language: Language): string {
-  if (database === "postgresql" && language === "js") {
+// POSTGRESQL DB
+function postgresClientFile(language: Language): string {
+  if (language === "js") {
     return `
-      import { createRequire } from "module";
+import { createRequire } from "module";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 import __env from "./src/config/__env.js";
@@ -220,8 +245,53 @@ export default prisma;
   }
 }
 
-function mysqlClientFile(): string {
-  return `
+// MYSQL DB
+function mysqlClientFile(language: Language): string {
+  if (language === "js") {
+    return `
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const { PrismaClient } = require("@prisma/client");
+
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import __env from "./src/config/__env.js";
+
+if (!__env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL is not set. Add it to your .env file, e.g."\n +
+      'DATABASE_URL="mysql://user:password@localhost:3306/mydb"',
+  );
+}
+
+const connectionUrl = new URL(__env.DATABASE_URL);
+const databaseName = connectionUrl.pathname.replace(/^\\//, "");
+
+if (!databaseName) {
+  throw new Error(
+    "DATABASE_URL is missing a database name (the path segment after the " +
+      'host), e.g. "mysql://user:password@localhost:3306/mydb".',
+  );
+}
+
+const adapter = new PrismaMariaDb({
+  host: connectionUrl.hostname,
+  port: connectionUrl.port ? Number(connectionUrl.port) : 3306,
+  user: decodeURIComponent(connectionUrl.username),
+  password: decodeURIComponent(connectionUrl.password),
+  database: databaseName,
+  connectionLimit: 10,
+});
+
+export const prisma = new PrismaClient({
+  adapter,
+  log: ["warn", "error"],
+});
+
+export default prisma;
+
+      `;
+  } else {
+    return `
 import { PrismaClient } from "./generated/prisma/client.js";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import __env from "./src/config/__env.js";
@@ -259,10 +329,38 @@ export const prisma = new PrismaClient({
 
 export default prisma;
 `;
+  }
 }
 
-function sqliteClientFile(): string {
-  return `
+function sqliteClientFile(language: Language): string {
+  if (language === "js") {
+    return `
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const { PrismaClient } = require("@prisma/client");
+
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import __env from "./src/config/__env.js";
+
+if (!__env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL is not set. Add it to your .env file, e.g.\\n" +
+      'DATABASE_URL="file:./dev.db"',
+  );
+}
+
+const adapter = new PrismaBetterSqlite3({ url: __env.DATABASE_URL });
+
+export const prisma = new PrismaClient({
+  adapter,
+  log: ["warn", "error"],
+});
+
+export default prisma;
+
+      `;
+  } else {
+    return `
 import { PrismaClient } from "./generated/prisma/client.js";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import __env from "./src/config/__env.js";
@@ -283,6 +381,7 @@ export const prisma = new PrismaClient({
 
 export default prisma;
 `;
+  }
 }
 
 export const prismaSchema = (): string => {

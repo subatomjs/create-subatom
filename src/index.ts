@@ -40,24 +40,29 @@ async function main() {
     process.exit(1);
   }
 
-  if(config.orm === "prisma" && config.database === "postgresql"){
-      outro(
-    pc.green(`Done! Next steps:\n\n`) +
-      pc.cyan(`  cd ${config.projectName}\n`) +
-      pc.yellow(`  npm run build-schema\n`) +
-      pc.blue(`  npm run db:generate\n`) +
-      pc.green(`  npm run db:migrate\n`) +
-      pc.cyan(`  npm run dev\n`),
-  );
-  }else{
- outro(
-    pc.green(`Done! Next steps:\n\n`) +
-      pc.cyan(`  cd ${config.projectName}\n`) +
-      pc.cyan(`  npm run dev\n`),
-  );
+  if (
+    config.orm === "prisma" &&
+    (config.database === "postgresql" || config.database === "mysql" || config.database === 'sqlite')
+  ) {
+    outro(
+      pc.bold(`Done! Just make sure:\n\n`) +
+        pc.cyan(`  cd ${config.projectName}\n`) +
+        pc.yellow(
+          `  ${config.language === "js" ? "node scripts/setup.env.js" : "node scripts/setup.env.ts"}\n`,
+        ) +
+        pc.yellow(`  Add database url to .env...\n`) +
+        pc.yellow(`  npm run build-schema\n`) +
+        pc.blue(`  npm run db:generate\n`) +
+        pc.green(`  npm run db:migrate\n`) +
+        pc.cyan(`  npm run dev\n`),
+    );
+  } else {
+    outro(
+      pc.green(`Done! Next steps:\n\n`) +
+        pc.cyan(`  cd ${config.projectName}\n`) +
+        pc.cyan(`  npm run dev\n`),
+    );
   }
-
- 
 }
 
 main();

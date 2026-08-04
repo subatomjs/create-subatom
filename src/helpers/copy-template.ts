@@ -13,6 +13,7 @@ import {
   envConfigForMongoose,
   envConfigForPrisma,
   mainFileContent,
+  generateEnv,
 } from "../constants/static_content.js";
 import { handlePrismaSchemaBuilder } from "../constants/schema_builder.js";
 
@@ -25,6 +26,14 @@ export async function copyTemplate(
   targetDir: string,
 ): Promise<void> {
   await fs.ensureDir(targetDir);
+  const scriptDir = path.join(process.cwd(), config.projectName, "scripts");
+  const fileName = config.language === "js" ? "setup.env.js" : "setup.env.ts";
+  const filePath = path.join(scriptDir, fileName);
+
+  // 2. Ensure the directory exists (creates recursively if missing)
+  await fs.mkdir(scriptDir, { recursive: true });
+  // 3. Write the file safely
+  await fs.writeFile(filePath, generateEnv(), "utf-8");
 
   const baseTemplate = config.language === "ts" ? "template_ts" : "template_js";
   await copyIfExists(
@@ -55,12 +64,18 @@ export async function copyTemplate(
       config.database,
       config.language,
       config.projectName,
-      config.orm
+      config.orm,
     );
   }
 
   if (config.orm === "mongoose") {
-    await addMongooseConfig(targetDir, config.language, config.projectName, config.database, config.orm);
+    await addMongooseConfig(
+      targetDir,
+      config.language,
+      config.projectName,
+      config.database,
+      config.orm,
+    );
   }
 
   if (config.useRedis) {
@@ -104,7 +119,7 @@ async function addPrismaConfig(
   database: ProjectConfig["database"],
   language: ProjectConfig["language"],
   projectName: ProjectConfig["projectName"],
-  orm: ProjectConfig["orm"]
+  orm: ProjectConfig["orm"],
 ): Promise<void> {
   const modelFilePath = path.join(targetDir, "src", "models", "subatom.prisma");
   const envSamplePath = path.join(targetDir, ".env.requirement");
@@ -149,8 +164,8 @@ async function addPrismaConfig(
       )
     : null;
 
-//! 4. Main file creation 
-      database !== "mongodb"
+  //! 4. Main file creation
+  database !== "mongodb"
     ? await fs.writeFile(
         path.join(
           `${process.cwd()}/${projectName}`,
@@ -162,24 +177,25 @@ async function addPrismaConfig(
     : null;
 
   //! 5. Write schema builder file
-// 1. Define the directory and full file path clearly
-const scriptDir = path.join(process.cwd(), projectName, "script");
-const fileName = language === "js" ? "schema_builder.js" : "schema_builder.ts";
-const filePath = path.join(scriptDir, fileName);
+  // 1. Define the directory and full file path clearly
+  const scriptDir = path.join(process.cwd(), projectName, "scripts");
+  const fileName =
+    language === "js" ? "schema_builder.js" : "schema_builder.ts";
+  const filePath = path.join(scriptDir, fileName);
 
-// 2. Ensure the directory exists (creates recursively if missing)
-await fs.mkdir(scriptDir, { recursive: true });
+  // 2. Ensure the directory exists (creates recursively if missing)
+  await fs.mkdir(scriptDir, { recursive: true });
 
-// 3. Write the file safely
-await fs.writeFile(
-  filePath,
-  handlePrismaSchemaBuilder(
-    path.join(process.cwd(), projectName),
-    database,
-    language
-  ),
-  "utf-8"
-);
+  // 3. Write the file safely
+  await fs.writeFile(
+    filePath,
+    handlePrismaSchemaBuilder(
+      path.join(process.cwd(), projectName),
+      database,
+      language,
+    ),
+    "utf-8",
+  );
 
   //! 5. Write .env.requirement — outputFile creates any missing parent dirs
   const env_for_prisma = `
@@ -197,27 +213,15 @@ HOST = 'localhost'
   await fs.outputFile(prisma_env_conf, envConfigForPrisma(language), "utf-8");
 }
 
-
-
-
-
-
-
-
-
-
-
 //!(****************************************************************************************************************)
 
 //TODO 2. --------- MONGOOSE CONFIG ---------
 async function addMongooseConfig(
   targetDir: string,
   language: ProjectConfig["language"],
-  projectName: ProjectConfig['projectName'],
-  database: ProjectConfig['database'],
-  orm: ProjectConfig['orm']
-
-
+  projectName: ProjectConfig["projectName"],
+  database: ProjectConfig["database"],
+  orm: ProjectConfig["orm"],
 ): Promise<void> {
   const modelFilePath = path.join(
     targetDir,
@@ -259,16 +263,15 @@ HOST = 'localhost'
     "utf-8",
   );
 
-  //! 5. Main file creation 
-   await fs.writeFile(
-        path.join(
-          `${process.cwd()}/${projectName}`,
-          `${language === "js" ? "main.js" : "main.ts"}`,
-        ),
-        mainFileContent(database, orm, language, projectName),
-        "utf-8",
-      )
-
+  //! 5. Main file creation
+  await fs.writeFile(
+    path.join(
+      `${process.cwd()}/${projectName}`,
+      `${language === "js" ? "main.js" : "main.ts"}`,
+    ),
+    mainFileContent(database, orm, language, projectName),
+    "utf-8",
+  );
 }
 
 function slugify(label: string): string {
