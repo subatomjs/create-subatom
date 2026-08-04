@@ -1,13 +1,13 @@
 {
   "type": "module",
   "scripts": {
-    "build-schema": "ts-node scripts/schema_builder.ts",
-    "build": "tsc",
-    "dev": "tsx main.ts",
-    "start": "node dist/main.js"
+    "dev": "subatom dev",
+    "build": "subatom build",
+    "start": "subatom start",
+    "preview": "subatom preview"
   },
   "dependencies": {
-    "subatom": "^0.1.0"
+    "subatom": "^0.3.1"
   },
   "devDependencies": {
     "typescript": "^5.5.4",

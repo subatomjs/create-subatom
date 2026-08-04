@@ -1,11 +1,10 @@
 {
   "type": "module",
   "scripts": {
-    "build-schema": "node scripts/schema_builder.js",
-    "dev": "node --watch main.js",
-    "start": "node main.js"
+    "dev": "subatom dev",
+    "preview": "subatom preview"
   },
   "dependencies": {
-    "subatom": "^0.1.0"
+    "subatom": "^0.3.1"
   }
 }

@@ -160,6 +160,48 @@ function getDbDisplayName(database: Database): string {
       return database;
   }
 }
+
+export function subatomConfigGenerate(language:Language):string{
+
+  if(language === "js"){
+      return (`
+      import { defineConfig } from "subatom";
+
+      export default defineConfig({
+             port: 8080,
+             host: "localhost",
+             outDir: "build",
+             entry:"main.js",
+             watch: {
+                    extensions: ["js", "jsx"],
+                    debounceMs: 500,
+                    ignore: ["**/logs/**"],
+        }
+      });
+    `)
+  }else{
+    return (`
+      import { defineConfig } from "subatom";
+
+      export default defineConfig({
+             port: 8080,
+             host: "localhost",
+             outDir: "build",
+             sourcemap: true,
+             minify: true,
+             entry:"main.ts",
+             watch: {
+                    extensions: ["ts", "tsx", "js", "jsx"],
+                    debounceMs: 500,
+                    ignore: ["**/logs/**"],
+        }
+      });
+    `)
+  }
+
+
+
+}
 /**
  * Generates the Prisma Client bootstrap file (`prisma.ts` / `prisma.js`)
  * wired to the correct driver adapter for the selected database — and,

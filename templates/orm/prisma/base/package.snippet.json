@@ -6,6 +6,7 @@
     "prisma": "^7.9.1"
   },
   "scripts": {
+    "build-schema": "ts-node scripts/schema_builder.ts",
     "db:generate": "npx prisma generate",
     "db:migrate": "npx prisma migrate dev"
   }

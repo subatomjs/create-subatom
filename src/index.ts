@@ -8,18 +8,30 @@ import { copyTemplate } from "./helpers/copy-template.js";
 import { mergePackageJson } from "./helpers/merge-package-json.js";
 import { installDeps } from "./helpers/install-deps.js";
 import { gitInit } from "./helpers/git-init.js";
+import { resolveProjectNameArg, InvalidProjectNameError } from "./helpers/resolve-project-name.js";
+import { buildOutroMessage } from "./helpers/format-outro.js";
 
 async function main() {
   intro(pc.bgCyan(pc.black(" create-subatom ")));
 
-  const config = await runPrompts(process.argv[2]);
+  let projectNameArg: string | undefined;
+  try {
+    projectNameArg = resolveProjectNameArg(process.argv[2]);
+  } catch (err) {
+    if (err instanceof InvalidProjectNameError) {
+      cancel(`${pc.red(err.message)}\n\n${pc.dim(err.cause)}`);
+      process.exit(1);
+    }
+    throw err;
+  }
+
+  const config = await runPrompts(projectNameArg);
   const targetDir = path.resolve(process.cwd(), config.projectName);
 
   const s = spinner();
 
   try {
     s.start("Creating project structure");
-    // cast config to any to satisfy TemplateConfig index signature
     await copyTemplate(config as unknown as any, targetDir);
     s.stop("Project structure created");
 
@@ -40,29 +52,7 @@ async function main() {
     process.exit(1);
   }
 
-  if (
-    config.orm === "prisma" &&
-    (config.database === "postgresql" || config.database === "mysql" || config.database === 'sqlite')
-  ) {
-    outro(
-      pc.bold(`Done! Just make sure:\n\n`) +
-        pc.cyan(`  cd ${config.projectName}\n`) +
-        pc.yellow(
-          `  ${config.language === "js" ? "node scripts/setup.env.js" : "node scripts/setup.env.ts"}\n`,
-        ) +
-        pc.yellow(`  Add database url to .env...\n`) +
-        pc.yellow(`  npm run build-schema\n`) +
-        pc.blue(`  npm run db:generate\n`) +
-        pc.green(`  npm run db:migrate\n`) +
-        pc.cyan(`  npm run dev\n`),
-    );
-  } else {
-    outro(
-      pc.green(`Done! Next steps:\n\n`) +
-        pc.cyan(`  cd ${config.projectName}\n`) +
-        pc.cyan(`  npm run dev\n`),
-    );
-  }
+  outro(buildOutroMessage(config));
 }
 
 main();
