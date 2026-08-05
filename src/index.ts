@@ -14,9 +14,9 @@ import { buildOutroMessage } from "./helpers/format-outro.js";
 async function main() {
   intro(pc.bgCyan(pc.black(" create-subatom ")));
 
-  let projectNameArg: string | undefined;
+  let resolved: { name: string | undefined; useCurrentDir: boolean };
   try {
-    projectNameArg = resolveProjectNameArg(process.argv[2]);
+    resolved = resolveProjectNameArg(process.argv[2]);
   } catch (err) {
     if (err instanceof InvalidProjectNameError) {
       cancel(`${pc.red(err.message)}\n\n${pc.dim(err.cause)}`);
@@ -25,8 +25,12 @@ async function main() {
     throw err;
   }
 
-  const config = await runPrompts(projectNameArg);
-  const targetDir = path.resolve(process.cwd(), config.projectName);
+  const config = await runPrompts(resolved.name);
+
+  // "." means install into the current directory — don't nest a new folder.
+  const targetDir = resolved.useCurrentDir
+    ? process.cwd()
+    : path.resolve(process.cwd(), config.projectName);
 
   const s = spinner();
 
