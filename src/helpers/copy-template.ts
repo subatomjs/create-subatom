@@ -12,10 +12,13 @@ import {
   mongooseSchema,
   prismaSchema,
   envConfigForMongoose,
-  envConfigForPrisma,
   mainFileContent,
   generateEnv,
   subatomConfigGenerate,
+  drizzleConfigFile,
+  drizzleSchema,
+  DatabasePoolForDrizzle,
+  envConfigForRelationalDb,
 } from "../constants/static_content.js";
 import { handlePrismaSchemaBuilder } from "../constants/schema_builder.js";
 
@@ -55,15 +58,18 @@ export async function copyTemplate(
     ),
   ]);
 
-  const baseTemplate =
-    config.language === "ts" ? "template_ts" : "template_js";
+  const baseTemplate = config.language === "ts" ? "template_ts" : "template_js";
   const ormBaseLabel = `orm/${config.orm}/base`;
 
   // BUG FIX (perf): these copies write to disjoint subfolders of targetDir
   // and don't depend on one another, so run them in parallel instead of
   // serially awaiting each one.
   const copyJobs: Promise<void>[] = [
-    copyIfExists(path.join(TEMPLATES_DIR, baseTemplate), targetDir, baseTemplate),
+    copyIfExists(
+      path.join(TEMPLATES_DIR, baseTemplate),
+      targetDir,
+      baseTemplate,
+    ),
     copyIfExists(
       path.join(TEMPLATES_DIR, "orm", config.orm, "base"),
       targetDir,
@@ -83,9 +89,9 @@ export async function copyTemplate(
 
   await Promise.all(copyJobs);
 
-  // Prisma's schema.prisma ships with a placeholder provider — patch it now
-  // that both the base and database-specific copies are done. This must run
-  // *after* the copies above, since it depends on files they produce.
+  // ORM-specific file generation must run *after* the copies above, since
+  // it patches/overwrites placeholder files (schema.prisma, schema.ts,
+  // main.ts, etc.) that the copies just put in place.
   if (config.orm === "prisma") {
     await addPrismaConfig(
       targetDir,
@@ -113,6 +119,21 @@ export async function copyTemplate(
 
   if (config.orm === "mongoose") {
     await addMongooseConfig(
+      targetDir,
+      config.language,
+      config.projectName,
+      config.database,
+      config.orm,
+    );
+  }
+
+  // BUG FIX: this branch was missing entirely. Without it, Drizzle projects
+  // got the raw (placeholder) template files copied in above and nothing
+  // else — no generated schema.ts content, no db_pool file, and no main
+  // file — which is exactly the "schema.ts has no content / main file not
+  // created" issue.
+  if (config.orm === "drizzle") {
+    await addDrizzleConfig(
       targetDir,
       config.language,
       config.projectName,
@@ -223,10 +244,10 @@ async function addPrismaConfig(
   }
 
   const env_for_prisma = `
-DATABASE_URL = ""
-NODE_ENV="development"
-PORT = 8080
-HOST = 'localhost'
+        DATABASE_URL = ""
+        NODE_ENV="development"
+        PORT = 8080
+        HOST = 'localhost'
 `;
 
   // BUG FIX: previously these paths were rebuilt from process.cwd() +
@@ -266,7 +287,7 @@ HOST = 'localhost'
     // model file
     fs.outputFile(modelFilePath, prismaSchema(), "utf-8"),
     // __env config
-    fs.outputFile(prisma_env_conf, envConfigForPrisma(language), "utf-8"),
+    fs.outputFile(prisma_env_conf, envConfigForRelationalDb(language), "utf-8"),
   ];
 
   // mongodb has no schema.prisma / prisma.js / main.js of its own — keep the
@@ -275,7 +296,11 @@ HOST = 'localhost'
   if (database !== "mongodb") {
     jobs.push(
       fs.writeFile(schemaPath, schemaContent(database, language), "utf-8"),
-      fs.writeFile(prismaFilePath, prismaFileGenerate(database, language), "utf-8"),
+      fs.writeFile(
+        prismaFilePath,
+        prismaFileGenerate(database, language),
+        "utf-8",
+      ),
       fs.writeFile(
         mainFilePath,
         mainFileContent(database, orm, language, projectName),
@@ -320,10 +345,11 @@ async function addMongooseConfig(
     language === "js" ? "main.js" : "main.ts",
   );
 
-  const env_for_mongoose = `MONGO_CONNECTION_STRING = ""
-  NODE_ENV="development"
-PORT = 8080
-HOST = 'localhost'
+  const env_for_mongoose = `
+        MONGO_CONNECTION_STRING = ""
+        NODE_ENV="development"
+        PORT = 8080
+        HOST = 'localhost'
 `;
 
   // All five writes are independent — run concurrently.
@@ -335,6 +361,71 @@ HOST = 'localhost'
     fs.writeFile(
       mainFilePath,
       mainFileContent(database, orm, language, projectName),
+      "utf-8",
+    ),
+  ]);
+}
+
+//TODO 3. --------- DRIZZLE CONFIG ---------
+export async function addDrizzleConfig(
+  targetDir: string,
+  language: ProjectConfig["language"],
+  projectName: ProjectConfig["projectName"],
+  database: ProjectConfig["database"],
+  orm: ProjectConfig["orm"],
+): Promise<void> {
+  if (database === "mongodb") {
+    throw new Error("Cannot attach Drizzle configuration to MongoDB.");
+  }
+
+  const ext = language === "js" ? "js" : "ts";
+
+  // Path resolution alignment (all schema and pool paths located under src/db)
+  const mainFilePath = path.join(targetDir, `main.${ext}`);
+  const rootDrizzleDir = path.join(
+    targetDir,
+    "drizzle",
+    language === "ts" ? "schema.ts" : "schema.js",
+  );
+  const drizzleConfigFilePath = path.join(targetDir, `drizzle.config.${ext}`);
+  const envSamplePath = path.join(targetDir, ".env.requirement");
+
+  const srcDbDir = path.join(targetDir, "src", "db");
+  const schemaPath = path.join(srcDbDir, `schema.${ext}`);
+  const poolPath = path.join(srcDbDir, `db_pool.${ext}`);
+
+  const configDir = path.join(targetDir, "src", "config");
+  const drizzleEnvConf = path.join(configDir, `__env.${ext}`);
+
+  const envContent = `DATABASE_URL=""
+                      NODE_ENV="development"
+                      PORT=8080
+                      HOST="localhost"
+`;
+
+  // Write all generator files atomically
+  await Promise.all([
+    fs.outputFile(
+      drizzleConfigFilePath,
+      drizzleConfigFile(database, language),
+      "utf-8",
+    ),
+    fs.outputFile(envSamplePath, envContent, "utf-8"),
+    fs.outputFile(schemaPath, drizzleSchema(database, language), "utf-8"),
+    fs.outputFile(
+      poolPath,
+      new DatabasePoolForDrizzle(language, database).generateCode(),
+      "utf-8",
+    ),
+    fs.outputFile(drizzleEnvConf, envConfigForRelationalDb(language), "utf-8"),
+    fs.outputFile(
+      mainFilePath,
+      mainFileContent(database, orm, language, projectName),
+      "utf-8",
+    ),
+    fs.outputFile(
+      rootDrizzleDir,
+      `export {subatom} from '../src/db/schema.js'`,
       "utf-8",
     ),
   ]);

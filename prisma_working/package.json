@@ -1,0 +1,25 @@
+{
+  "name": "prisma_working",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "build-schema": "node scripts/schema_builder.js",
+    "db:generate": "npx prisma generate",
+    "db:migrate": "npx prisma migrate dev",
+    "dev": "subatom dev",
+    "preview": "subatom preview"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "pg": "^8.22.0",
+    "subatom": "^0.3.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.0",
+    "eslint": "^9.9.0",
+    "prisma": "^7.9.1"
+  }
+}

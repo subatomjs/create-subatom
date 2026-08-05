@@ -39,7 +39,7 @@ export function schemaContent(
 ): string {
   if (
     language === "js" &&
-    (database === "postgresql" || database === "mysql" || database === 'sqlite')
+    (database === "postgresql" || database === "mysql" || database === "sqlite")
   ) {
     return `
   generator client {
@@ -47,7 +47,7 @@ export function schemaContent(
   }
 
 datasource db {
-  provider ="${database}"
+  provider = "${database}"
 }
 
 
@@ -95,46 +95,51 @@ export function mainFileContent(
   fileType: Language,
   projectName: string,
 ): string {
-  // 1. Validate supported combinations early
-  const isValidPrismaDb = ["postgresql", "mysql", "sqlite"].includes(database);
-  if (orm === "mongoose" && database !== "mongodb")
-    return "// Unsupported database configuration";
-  if (orm === "prisma" && !isValidPrismaDb)
-    return "// Unsupported database configuration";
+  const relationalDbs: Database[] = ["postgresql", "sqlite", "mysql"];
 
-  // 2. Format language specifics
+  // 1. Validate supported combinations
+  if (orm === "mongoose" && database !== "mongodb") {
+    return "// Unsupported database configuration: Mongoose only supports MongoDB.";
+  }
+  if ((orm === "prisma" || orm === "drizzle") && !relationalDbs.includes(database)) {
+    return `// Unsupported database configuration: ${orm} only supports relational databases (PostgreSQL, MySQL, SQLite).`;
+  }
+
+  // 2. Language specifics
   const isTs = fileType === "ts";
-  const returnType = isTs ? ":Promise<void>" : "";
-  const catchError = isTs ? "error:unknown" : "error";
+  const returnType = isTs ? ": Promise<void>" : "";
   const logError = isTs ? "error as Error" : "error";
 
-  // 3. Format ORM/Database specific behavior
-  const isMongoose = orm === "mongoose";
-  const defaultPort = isMongoose ? "" : " || 8080";
+  // 3. Imports and connection logic based on ORM
+  let imports = "";
+  let connectLogic = "";
+  let errorMessage = "";
 
-  const connectLogic = isMongoose
-    ? `await connectDB();`
-    : `await prisma.$connect();\n                console.log("✅ Connected to ${getDbDisplayName(database)} successfully");`;
-
-  const importPrisma = isMongoose ? "" : `import prisma from "./prisma.js";\n`;
-  const importConnectDB = isMongoose
-    ? `import connectDB from "./src/config/mongoConnect.js";\n`
-    : "";
-  const errorMessage = isMongoose
-    ? `"❌ Something went wrong:", ${logError}`
-    : `"❌ Failed to connect to ${getDbDisplayName(database)}:", ${logError}`;
+  if (orm === "mongoose") {
+    imports = `import connectDB from "./src/config/mongoConnect.js";\n`;
+    connectLogic = `await connectDB();`;
+    errorMessage = `"❌ Something went wrong:", ${logError}`;
+  } else if (orm === "prisma") {
+    imports = `import prisma from "./prisma.js";\n`;
+    connectLogic = `await prisma.$connect();\n        console.log("✅ Connected to ${database} (Prisma) successfully");`;
+    errorMessage = `"❌ Failed to connect to ${database}:", ${logError}`;
+  } else if (orm === "drizzle") {
+    imports = `import { db } from "./src/db/db_pool.js";\nimport { sql } from "drizzle-orm";\n`;
+    connectLogic = `// Verify pool connection\n        await db.execute(sql\`SELECT 1\`);\n        console.log("✅ Connected to ${database} (Drizzle) successfully");`;
+    errorMessage = `"❌ Failed to connect to ${database}:", ${logError}`;
+  }
 
   // 4. Return unified template
   return `//! Adjust path according to your project if mismatch..  
 import __env from "./src/config/__env.js";
 import server from "./src/server.js";
-${importConnectDB}${importPrisma}
+${imports}
 async function main()${returnType} {
     try {
         ${connectLogic}
 
-        // Server connect.......
-        server.listen(__env.PORT${defaultPort}, __env.HOST, "${projectName}");
+        // Server listen
+        server.listen(__env.PORT || 8080, __env.HOST, "${projectName}");
     } catch (error) {
         console.error(${errorMessage});
         process.exit(1);
@@ -145,26 +150,9 @@ await main();
 `;
 }
 
-// Helper to sanitize DB labels for logs
-function getDbDisplayName(database: Database): string {
-  switch (database) {
-    case "postgresql":
-      return "PostgreSQL";
-    case "mysql":
-      return "MySQL server";
-    case "sqlite":
-      return "SQLite";
-    case "mongodb":
-      return "MongoDB";
-    default:
-      return database;
-  }
-}
-
-export function subatomConfigGenerate(language:Language):string{
-
-  if(language === "js"){
-      return (`
+export function subatomConfigGenerate(language: Language): string {
+  if (language === "js") {
+    return `
       import { defineConfig } from "subatom";
 
       export default defineConfig({
@@ -178,9 +166,9 @@ export function subatomConfigGenerate(language:Language):string{
                     ignore: ["**/logs/**"],
         }
       });
-    `)
-  }else{
-    return (`
+    `;
+  } else {
+    return `
       import { defineConfig } from "subatom";
 
       export default defineConfig({
@@ -196,23 +184,17 @@ export function subatomConfigGenerate(language:Language):string{
                     ignore: ["**/logs/**"],
         }
       });
-    `)
+    `;
   }
-
-
-
 }
+
 /**
  * Generates the Prisma Client bootstrap file (`prisma.ts` / `prisma.js`)
- * wired to the correct driver adapter for the selected database — and,
- * for SQLite, the selected connection type.
+ * wired to the correct driver adapter for the selected database.
  *
  * @param database      The selected SQL database. MongoDB is intentionally
  *                       excluded — the mongoose ORM path never reaches
  *                       this generator.
- * @param sqliteDriver   Required when database === "sqlite". Every branch
- *                       below is exhaustively typed so a missing case is a
- *                       compile-time error, not a runtime `undefined`.
  */
 export function prismaFileGenerate(
   database: SqlDatabase,
@@ -300,7 +282,7 @@ import __env from "./src/config/__env.js";
 
 if (!__env.DATABASE_URL) {
   throw new Error(
-    "DATABASE_URL is not set. Add it to your .env file, e.g."\n +
+    "DATABASE_URL is not set. Add it to your .env file, e.g.\\n" +
       'DATABASE_URL="mysql://user:password@localhost:3306/mydb"',
   );
 }
@@ -441,7 +423,7 @@ export const prismaSchema = (): string => {
   `;
 };
 
-export const envConfigForPrisma = (fileType: Language) => {
+export const envConfigForRelationalDb = (fileType: Language) => {
   if (fileType === "ts") {
     return `
 /// <reference types="node" />
@@ -477,7 +459,7 @@ export default __env;
   }
 };
 
-//! 2.  Mongo DB .....................................
+//! 2.  Mongoose ORM .....................................
 
 export const mongoDBConfig = (fileType: Language): string => {
   if (fileType === "ts") {
@@ -499,7 +481,7 @@ const connectDB = async (): Promise<void> => {
  console.log("MongoDB Connected:", conn.connection.host);
   } catch (error) {
     const err = error as Error;
-     console.error("Error connecting to MongoDB:", (err as Error).message);
+     console.error("Error connecting to MongoDB:", err.message);
     process.exit(1);
   }
 };
@@ -684,3 +666,148 @@ export default __env;
     `;
   }
 };
+
+//! 3.  Drizzle ORM .....................................
+
+/**
+ * Generates drizzle.config file content based on dialect.
+ */
+export function drizzleConfigFile(database: Database, language: Language): string {
+  if (database === "mongodb") {
+    throw new Error("Drizzle does not support MongoDB (NoSQL).");
+  }
+
+  const extension = language === "ts" ? "ts" : "js";
+  const dialect = database === "postgresql" ? "postgresql" : database;
+
+  return `import { defineConfig } from 'drizzle-kit';
+import __env from './src/config/__env.js';
+
+export default defineConfig({
+  schema: './src/db/schema.${extension}',
+  out: './drizzle',
+  dialect: '${dialect}',
+  dbCredentials: {
+    url: __env.DATABASE_URL,
+  },
+});
+`;
+}
+
+/**
+ * Generates dialect-aware schema file content.
+ */
+export function drizzleSchema(database: Database, language: Language): string {
+  const isTs = language === "ts";
+
+  switch (database) {
+    case "postgresql":
+      return `import { pgTable, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+
+export const subatom = pgTable('subatom', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  application: varchar('application', { length: 255 }).notNull(),
+  version: varchar('version', { length: 8 }).notNull().unique(),
+  author: varchar('author', { length: 255 }).notNull(),
+  framework: varchar('framework', { length: 255 }).notNull().default("Subatom"),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()),
+});
+${isTs ? '\nexport type TypeSubatom = typeof subatom.$inferSelect;' : ''}
+`;
+
+    case "mysql":
+      return `import { mysqlTable, varchar, timestamp } from 'drizzle-orm/mysql-core';
+import { sql } from 'drizzle-orm';
+
+export const subatom = mysqlTable('subatom', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql\`(uuid())\`),
+  application: varchar('application', { length: 255 }).notNull(),
+  version: varchar('version', { length: 8 }).notNull().unique(),
+  author: varchar('author', { length: 255 }).notNull(),
+  framework: varchar('framework', { length: 255 }).notNull().default("Subatom"),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+${isTs ? '\nexport type TypeSubatom = typeof subatom.$inferSelect;' : ''}
+`;
+
+    case "sqlite":
+      return `import { sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
+
+export const subatom = sqliteTable('subatom', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  application: text('application').notNull(),
+  version: text('version').notNull().unique(),
+  author: text('author').notNull(),
+  framework: text('framework').notNull().default("Subatom"),
+  createdAt: text('created_at').default(sql\`CURRENT_TIMESTAMP\`).notNull(),
+  updatedAt: text('updated_at').default(sql\`CURRENT_TIMESTAMP\`),
+});
+${isTs ? '\nexport type TypeSubatom = typeof subatom.$inferSelect;' : ''}
+`;
+
+    default:
+      throw new Error(`Unsupported database dialect: ${database}`);
+  }
+}
+
+/**
+ * Handles database pool generation for Drizzle.
+ */
+export class DatabasePoolForDrizzle {
+  public readonly language: Language;
+  public readonly database: Database;
+
+  constructor(language: Language, database: Database) {
+    this.language = language;
+    this.database = database;
+  }
+
+  public generateCode(): string {
+    switch (this.database) {
+      case "postgresql":
+        return `import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
+import * as schema from "./schema.js";
+import __env from "../config/__env.js";
+
+const { Pool } = pg;
+
+const pool = new Pool({
+  connectionString: __env.DATABASE_URL,
+});
+
+export const db = drizzle(pool, { schema });
+`;
+
+      case "mysql":
+        return `import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
+import * as schema from "./schema.js";
+import __env from "../config/__env.js";
+
+const pool = mysql.createPool({
+  uri: __env.DATABASE_URL,
+});
+
+export const db = drizzle(pool, { schema, mode: "default" });
+`;
+
+      case "sqlite":
+        return `import { drizzle } from "drizzle-orm/better-sqlite3";
+import Database from "better-sqlite3";
+import * as schema from "./schema.js";
+import __env from "../config/__env.js";
+
+const sqlite = new Database(__env.DATABASE_URL || "sqlite.db");
+
+export const db = drizzle(sqlite, { schema });
+`;
+
+      default:
+        throw new Error(`Unsupported database: ${this.database}`);
+    }
+  }
+}
