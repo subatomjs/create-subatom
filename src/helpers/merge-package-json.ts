@@ -20,7 +20,7 @@ export async function mergePackageJson(
     rootPackageJson = await fs.readJson(rootPackageJsonPath);
   }
 
-  const snippetPaths = (await findSnippetFiles(targetDir)).sort(); // deterministic merge order
+  const snippetPaths = (await findSnippetFiles(targetDir)).sort();
 
   for (const snippetPath of snippetPaths) {
     const snippet: PackageJsonShape = await fs.readJson(snippetPath);
@@ -45,12 +45,12 @@ export async function mergePackageJson(
     private: true,
     version: mergedVersion ?? "0.1.0",
     ...(description ? { description } : {}),
-    ...((mergedType !== undefined)
+    ...(mergedType !== undefined
       ? { type: mergedType }
       : config.language === "ts"
-      ? { type: "module" }
-      : {}),
-    scripts: scripts ?? {},
+        ? { type: "module" }
+        : {}),
+    scripts: adjustScriptExtensions(scripts ?? {}, config.language),
     dependencies: sortKeys(dependencies ?? {}),
     devDependencies: sortKeys(devDependencies ?? {}),
     ...rest,
@@ -88,6 +88,22 @@ function mergeTwo(
     dependencies: { ...base.dependencies, ...incoming.dependencies },
     devDependencies: { ...base.devDependencies, ...incoming.devDependencies },
   };
+}
+
+function adjustScriptExtensions(
+  scripts: Record<string, string>,
+  language: ProjectConfig["language"],
+): Record<string, string> {
+  if (language !== "js" && language !== "ts") return scripts;
+
+  const targetExt = language === "js" ? ".js" : ".ts";
+  const sourcePattern = language === "js" ? /\.ts\b/g : /\.js\b/g;
+
+  const updatedScripts: Record<string, string> = {};
+  for (const [key, value] of Object.entries(scripts)) {
+    updatedScripts[key] = value.replace(sourcePattern, targetExt);
+  }
+  return updatedScripts;
 }
 
 function sortKeys(obj: Record<string, string>): Record<string, string> {

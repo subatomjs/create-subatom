@@ -4,5 +4,9 @@
   },
   "devDependencies": {
     "@types/pg": "^8.20.3"
+  },
+    "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   }
 }

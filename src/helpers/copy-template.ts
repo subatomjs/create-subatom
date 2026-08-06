@@ -19,6 +19,10 @@ import {
   drizzleSchema,
   DatabasePoolForDrizzle,
   envConfigForRelationalDb,
+  generateDbUrl,
+  generateMigrationPathConfig,
+  resetDbConfig,
+  generateSeedForSqlite,
 } from "../constants/static_content.js";
 import { handlePrismaSchemaBuilder } from "../constants/schema_builder.js";
 
@@ -287,7 +291,11 @@ async function addPrismaConfig(
     // model file
     fs.outputFile(modelFilePath, prismaSchema(), "utf-8"),
     // __env config
-    fs.outputFile(prisma_env_conf, envConfigForRelationalDb(language), "utf-8"),
+    fs.outputFile(
+      prisma_env_conf,
+      envConfigForRelationalDb(language, database, orm),
+      "utf-8",
+    ),
   ];
 
   // mongodb has no schema.prisma / prisma.js / main.js of its own — keep the
@@ -366,6 +374,8 @@ async function addMongooseConfig(
   ]);
 }
 
+//!(****************************************************************************************************************)
+
 //TODO 3. --------- DRIZZLE CONFIG ---------
 export async function addDrizzleConfig(
   targetDir: string,
@@ -382,53 +392,106 @@ export async function addDrizzleConfig(
 
   // Path resolution alignment (all schema and pool paths located under src/db)
   const mainFilePath = path.join(targetDir, `main.${ext}`);
+
   const rootDrizzleDir = path.join(
     targetDir,
     "drizzle",
     language === "ts" ? "schema.ts" : "schema.js",
   );
+
   const drizzleConfigFilePath = path.join(targetDir, `drizzle.config.${ext}`);
+
   const envSamplePath = path.join(targetDir, ".env.requirement");
 
   const srcDbDir = path.join(targetDir, "src", "db");
+
   const schemaPath = path.join(srcDbDir, `schema.${ext}`);
+
+  const subatomModelPath = path.join(
+    targetDir,
+    "src",
+    "models",
+    `subatom.model.${ext}`,
+  );
+
   const poolPath = path.join(srcDbDir, `db_pool.${ext}`);
 
   const configDir = path.join(targetDir, "src", "config");
+
   const drizzleEnvConf = path.join(configDir, `__env.${ext}`);
 
+  // Additional For Mysql....
+  const dbUrlPath = path.join(srcDbDir, `dbUrl.${ext}`);
+  const migratePath = path.join(srcDbDir, `migrate.${ext}`);
+  const resetPath = path.join(srcDbDir, `reset.${ext}`);
+
   const envContent = `DATABASE_URL=""
-                      NODE_ENV="development"
-                      PORT=8080
-                      HOST="localhost"
+NODE_ENV="development"
+PORT=8080
+HOST="localhost"
 `;
 
-  // Write all generator files atomically
-  await Promise.all([
-    fs.outputFile(
-      drizzleConfigFilePath,
-      drizzleConfigFile(database, language),
-      "utf-8",
-    ),
-    fs.outputFile(envSamplePath, envContent, "utf-8"),
-    fs.outputFile(schemaPath, drizzleSchema(database, language), "utf-8"),
-    fs.outputFile(
-      poolPath,
-      new DatabasePoolForDrizzle(language, database).generateCode(),
-      "utf-8",
-    ),
-    fs.outputFile(drizzleEnvConf, envConfigForRelationalDb(language), "utf-8"),
+  const jobs: Promise<void>[] = [
+    // main.ts
     fs.outputFile(
       mainFilePath,
       mainFileContent(database, orm, language, projectName),
       "utf-8",
     ),
+
+    // drizzle.config.ts
     fs.outputFile(
-      rootDrizzleDir,
-      `export {subatom} from '../src/db/schema.js'`,
+      drizzleConfigFilePath,
+      drizzleConfigFile(database, language),
       "utf-8",
     ),
-  ]);
+    // .env.requirement
+    fs.outputFile(envSamplePath, envContent, "utf-8"),
+
+    //src/db/schema.ts
+    fs.outputFile(
+      schemaPath,
+      "export {subatom} from '../models/subatom.model.js'",
+      "utf-8",
+    ),
+
+    // /src/models/subatom.models.ts
+    fs.outputFile(subatomModelPath, drizzleSchema(database, language), "utf-8"),
+
+    // /src/db/db_pool.ts
+    fs.outputFile(
+      poolPath,
+      new DatabasePoolForDrizzle(language, database).generateCode(),
+      "utf-8",
+    ),
+
+    // /src/config/__env.ts
+    fs.outputFile(
+      drizzleEnvConf,
+      envConfigForRelationalDb(language, database, orm),
+      "utf-8",
+    ),
+  ];
+
+  if (database === "mysql") {
+    jobs.push(
+      fs.outputFile(dbUrlPath, generateDbUrl(language), "utf-8"),
+      fs.outputFile(migratePath, generateMigrationPathConfig(), "utf-8"),
+      fs.outputFile(resetPath, resetDbConfig(language), "utf-8"),
+    );
+  }
+
+  if (database === "sqlite") {
+    jobs.push(
+      fs.outputFile(
+        path.join(srcDbDir, `seed.${ext}`),
+        generateSeedForSqlite(),
+        "utf-8",
+      ),
+    );
+  }
+
+  await Promise.all(jobs);
 }
 
 function slugify(label: string): string {
