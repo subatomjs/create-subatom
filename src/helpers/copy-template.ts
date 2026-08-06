@@ -33,6 +33,7 @@ import {
   redisErrorsProvider,
   redisTypesProvider,
 } from "../constants/redis_static.js";
+import { setupEslint } from "./setup-eslint.js";
 
 // BUG FIX: `.pathname` on a file:// URL leaves a leading slash on Windows
 // (e.g. "/C:/Users/..."), which breaks path.join downstream. fileURLToPath
@@ -162,6 +163,9 @@ export async function copyTemplate(
     await configureRedis(targetDir, config.language);
   }
 
+  if(config.useEslint === true){
+    await setupEslint(config, targetDir)
+  }
   // Optional extras are independent of each other — copy concurrently.
   const optionalJobs: Promise<void>[] = [];
   if (config.useRedis) {
@@ -383,7 +387,11 @@ async function addMongooseConfig(
     fs.outputFile(mongooseConfigPath, mongoDBConfig(language), "utf-8"),
     fs.outputFile(envSamplePath, env_for_mongoose, "utf-8"),
     fs.outputFile(modelFilePath, mongooseSchema(language), "utf-8"),
-    fs.outputFile(mongooseEnvConfig, envConfigForMongoose(language, useRedis), "utf-8"),
+    fs.outputFile(
+      mongooseEnvConfig,
+      envConfigForMongoose(language, useRedis),
+      "utf-8",
+    ),
     fs.writeFile(
       mainFilePath,
       mainFileContent(database, orm, language, projectName, useRedis),
