@@ -1,9 +1,6 @@
 {
-  "devDependencies": {
-    "eslint": "^9.9.0",
-    "@eslint/js": "^9.9.0"
-  },
   "scripts": {
-    "lint": "eslint ."
+    "lint": "eslint .",
+     "lint:fix": "eslint . --fix"
   }
 }

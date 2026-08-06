@@ -23,7 +23,7 @@ export async function setupEslint(
       },
       scripts: {
         lint: "eslint .",
-        "lint:fix": "eslint . --fix",
+        "lint:fix": "eslint . --fix"
       },
     });
 
@@ -32,11 +32,11 @@ export async function setupEslint(
     await writeSnippet(targetDir, {
       devDependencies: {
         "eslint": "^9.39.5",
-        "@eslint/js": "^9.9.0",
+        "@eslint/js": "^9.39.5"
       },
       scripts: {
         lint: "eslint .",
-        "lint:fix": "eslint . --fix",
+        "lint:fix": "eslint . --fix"
       },
     });
 

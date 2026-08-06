@@ -173,11 +173,6 @@ export async function copyTemplate(
       copyIfExists(path.join(TEMPLATES_DIR, "redis"), targetDir, "redis"),
     );
   }
-  if (config.useEslint) {
-    optionalJobs.push(
-      copyIfExists(path.join(TEMPLATES_DIR, "eslint"), targetDir, "eslint"),
-    );
-  }
   if (config.useVitest) {
     optionalJobs.push(
       copyIfExists(path.join(TEMPLATES_DIR, "vitest"), targetDir, "vitest"),
