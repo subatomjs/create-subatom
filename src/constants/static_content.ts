@@ -160,6 +160,7 @@ export function mainFileContent(
   orm: Orm,
   fileType: Language,
   projectName: string,
+  useRedis: boolean
 ): string {
   const relationalDbs: Database[] = ["postgresql", "sqlite", "mysql"];
 
@@ -207,6 +208,7 @@ export function mainFileContent(
       return `//! Adjust path according to your project if mismatch..
 import __env from "./src/config/__env.js";
 import server from "./src/server.js";
+${useRedis === true? "import { bootstrapRedis } from './src/redis/redis.bootstrap.js';":""}
 ${imports}
 async function main()${returnType} {
   const healthy = await checkDatabaseConnection();
@@ -215,6 +217,7 @@ async function main()${returnType} {
     process.exit(1);
   }
   ${connectedLog}
+  ${useRedis === true ? "await bootstrapRedis();": ""}
 
   server.listen(__env.PORT || 8080, __env.HOST, "${projectName}");
 }
@@ -228,11 +231,12 @@ await main();
   return `//! Adjust path according to your project if mismatch..  
 import __env from "./src/config/__env.js";
 import server from "./src/server.js";
+${useRedis === true? "import { bootstrapRedis } from './src/redis/redis.bootstrap.js';":""}
 ${imports}
 async function main()${returnType} {
     try {
         ${connectLogic}
-
+        ${useRedis === true ? "await bootstrapRedis();": ""}
         // Server listen
         server.listen(__env.PORT || 8080, __env.HOST, "${projectName}");
     } catch (error) {
@@ -523,6 +527,7 @@ export const envConfigForRelationalDb = (
   fileType: Language,
   database: Database,
   orm: Orm,
+  useRedis:boolean
 ) => {
   if (fileType === "ts") {
     if (database === "sqlite" && orm === "drizzle") {
@@ -569,6 +574,12 @@ const environment = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: Number.isFinite(Number(process.env.PORT)) && process.env.PORT ? Number(process.env.PORT) : 8080,
   HOST: process.env.HOST || 'localhost',
+  ${useRedis === true ? "REDIS_URL: process.env.REDIS_URL as string || '',": ""}
+  ${useRedis === true ? "REDIS_KEY_PREFIX: process.env.REDIS_KEY_PREFIX as string || '',": ""}
+  ${useRedis === true ? "REDIS_REQUIRED: process.env.REDIS_REQUIRED as string || '',": ""}
+  ${useRedis === true ? "REDIS_CONNECT_TIMEOUT_MS: process.env.REDIS_CONNECT_TIMEOUT_MS as string || '',": ""}
+  ${useRedis === true ? "REDIS_SHUTDOWN_TIMEOUT_MS: process.env.REDIS_SHUTDOWN_TIMEOUT_MS as string || '',": ""}
+  ${useRedis === true ? "REDIS_DEBUG: process.env.REDIS_DEBUG as string || ''": ""}
 };
 
 const __env = Object.freeze(environment);
@@ -587,6 +598,12 @@ const environment = {
     NODE_ENV: process.env.NODE_ENV as string || "",
     PORT: Number(process.env.PORT) || 8080,
     HOST: process.env.HOST as string || "localhost",
+    ${useRedis === true ? "REDIS_URL: process.env.REDIS_URL || '',": ""}
+    ${useRedis === true ? "REDIS_KEY_PREFIX: process.env.REDIS_KEY_PREFIX || '',": ""}
+    ${useRedis === true ? "REDIS_REQUIRED: process.env.REDIS_REQUIRED || '',": ""}
+    ${useRedis === true ? "REDIS_CONNECT_TIMEOUT_MS: process.env.REDIS_CONNECT_TIMEOUT_MS || '',": ""}
+    ${useRedis === true ? "REDIS_SHUTDOWN_TIMEOUT_MS: process.env.REDIS_SHUTDOWN_TIMEOUT_MS || '',": ""}
+    ${useRedis === true ? "REDIS_DEBUG: process.env.REDIS_DEBUG || ''": ""}
 
 }
 const __env = Object.freeze(environment);
@@ -632,6 +649,12 @@ const environment = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: Number.isFinite(Number(process.env.PORT)) && process.env.PORT ? Number(process.env.PORT) : 8080,
   HOST: process.env.HOST || 'localhost',
+  ${useRedis === true ? "REDIS_URL: process.env.REDIS_URL || '',": ""}
+  ${useRedis === true ? "REDIS_KEY_PREFIX: process.env.REDIS_KEY_PREFIX || '',": ""}
+  ${useRedis === true ? "REDIS_REQUIRED: process.env.REDIS_REQUIRED || '',": ""}
+  ${useRedis === true ? "REDIS_CONNECT_TIMEOUT_MS: process.env.REDIS_CONNECT_TIMEOUT_MS || '',": ""}
+  ${useRedis === true ? "REDIS_SHUTDOWN_TIMEOUT_MS: process.env.REDIS_SHUTDOWN_TIMEOUT_MS || '',": ""}
+  ${useRedis === true ? "REDIS_DEBUG: process.env.REDIS_DEBUG || ''": ""}
 };
 
 const __env = Object.freeze(environment);
@@ -648,6 +671,12 @@ const environment = {
     NODE_ENV: process.env.NODE_ENV || "",
     PORT: Number(process.env.PORT) || 8080,
     HOST: process.env.HOST || "localhost",
+    ${useRedis === true ? "REDIS_URL: process.env.REDIS_URL || '',": ""}
+    ${useRedis === true ? "REDIS_KEY_PREFIX: process.env.REDIS_KEY_PREFIX || '',": ""}
+    ${useRedis === true ? "REDIS_REQUIRED: process.env.REDIS_REQUIRED || '',": ""}
+    ${useRedis === true ? "REDIS_CONNECT_TIMEOUT_MS: process.env.REDIS_CONNECT_TIMEOUT_MS || '',": ""}
+    ${useRedis === true ? "REDIS_SHUTDOWN_TIMEOUT_MS: process.env.REDIS_SHUTDOWN_TIMEOUT_MS || '',": ""}
+    ${useRedis === true ? "REDIS_DEBUG: process.env.REDIS_DEBUG || ''": ""}
 
 }
 const __env = Object.freeze(environment);
@@ -827,7 +856,7 @@ export default SubatomModel;
   }
 };
 
-export const envConfigForMongoose = (fileType: Language) => {
+export const envConfigForMongoose = (fileType: Language, useRedis:boolean) => {
   if (fileType === "ts") {
     return `
 
@@ -841,6 +870,12 @@ const environment = {
     NODE_ENV: process.env.NODE_ENV as string || "",
     PORT: Number(process.env.PORT) || 8080,
     HOST: process.env.HOST as string || "localhost",
+    ${useRedis === true ? "REDIS_URL: process.env.REDIS_URL as string || '',": ""}
+    ${useRedis === true ? "REDIS_KEY_PREFIX: process.env.REDIS_KEY_PREFIX as string || '',": ""}
+    ${useRedis === true ? "REDIS_REQUIRED: process.env.REDIS_REQUIRED as string || '',": ""}
+    ${useRedis === true ? "REDIS_CONNECT_TIMEOUT_MS: process.env.REDIS_CONNECT_TIMEOUT_MS as string || '',": ""}
+    ${useRedis === true ? "REDIS_SHUTDOWN_TIMEOUT_MS: process.env.REDIS_SHUTDOWN_TIMEOUT_MS as string || '',": ""}
+    ${useRedis === true ? "REDIS_DEBUG: process.env.REDIS_DEBUG as string || ''": ""}
 
 }
 const __env = Object.freeze(environment);
@@ -857,6 +892,12 @@ const environment = {
     NODE_ENV: process.env.NODE_ENV || "",
     PORT: Number(process.env.PORT) || 8080,
     HOST: process.env.HOST || "localhost",
+    ${useRedis === true ? "REDIS_URL: process.env.REDIS_URL || '',": ""}
+    ${useRedis === true ? "REDIS_KEY_PREFIX: process.env.REDIS_KEY_PREFIX || '',": ""}
+    ${useRedis === true ? "REDIS_REQUIRED: process.env.REDIS_REQUIRED || '',": ""}
+    ${useRedis === true ? "REDIS_CONNECT_TIMEOUT_MS: process.env.REDIS_CONNECT_TIMEOUT_MS || '',": ""}
+    ${useRedis === true ? "REDIS_SHUTDOWN_TIMEOUT_MS: process.env.REDIS_SHUTDOWN_TIMEOUT_MS || '',": ""}
+    ${useRedis === true ? "REDIS_DEBUG: process.env.REDIS_DEBUG || ''": ""}
 
 }
 const __env = Object.freeze(environment);

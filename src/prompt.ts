@@ -13,7 +13,7 @@ export async function runPrompts(
 ): Promise<ProjectConfig> {
   const projectName = cliProjectName ?? (await promptProjectName());
 
-  //! 1. Option: What language would you like to use? (TypeScript or JavaScript) 
+  //! 1. Option: What language would you like to use? (TypeScript or JavaScript)
   const language = await select({
     message: "Select a language:",
     options: [
@@ -23,7 +23,28 @@ export async function runPrompts(
   });
   exitOnCancel(language);
 
-  //! 2. Option: What ORM would you like to use? (Prisma, Drizzle, Mongoose)
+  //! 2. Option: Would you like to configure Redis?
+  const useRedis = await confirm({
+    message: "Would you like to configure Redis?",
+    initialValue: false,
+  });
+  exitOnCancel(useRedis);
+
+  //! 3. Option: Would you like to setup ESLint?
+  const useEslint = await confirm({
+    message: "Would you like to setup ESLint?",
+    initialValue: true,
+  });
+  exitOnCancel(useEslint);
+
+  //! 4. Option: Would you like to setup Vitest?
+  const useVitest = await confirm({
+    message: "Would you like to add Vitest?",
+    initialValue: false,
+  });
+  exitOnCancel(useVitest);
+
+  //! 5. Option: What ORM would you like to use? (Prisma, Drizzle, Mongoose)
   const orm = await select({
     message: "Select an ORM:",
     options: [
@@ -34,8 +55,7 @@ export async function runPrompts(
   });
   exitOnCancel(orm);
 
-
-  //! 3. Option: What database would you like to use? (PostgreSQL, MySQL, SQLite, MongoDB)
+  //! 6. Option: What database would you like to use? (PostgreSQL, MySQL, SQLite, MongoDB)
   let database: Database;
 
   if (orm === "mongoose") {
@@ -52,28 +72,6 @@ export async function runPrompts(
     exitOnCancel(selectedDatabase);
     database = selectedDatabase as Database;
   }
-  
-  //! 4. Option: Would you like to configure Redis?
-  const useRedis = await confirm({
-    message: "Would you like to configure Redis?",
-    initialValue: false,
-  });
-  exitOnCancel(useRedis);
-
-  //! 5. Option: Would you like to setup ESLint?
-  const useEslint = await confirm({
-    message: "Would you like to setup ESLint?",
-    initialValue: true,
-  });
-  exitOnCancel(useEslint);
-
-
-  //! 6. Option: Would you like to setup Vitest?
-  const useVitest = await confirm({
-    message: "Would you like to add Vitest?",
-    initialValue: false,
-  });
-  exitOnCancel(useVitest);
 
   return {
     projectName,
@@ -85,8 +83,6 @@ export async function runPrompts(
     useVitest: useVitest as boolean,
   };
 }
-
-
 
 async function promptProjectName(): Promise<string> {
   //! 1. Enter project name (e.g. my-app, my_project, my.project)

@@ -25,6 +25,14 @@ import {
   generateSeedForSqlite,
 } from "../constants/static_content.js";
 import { handlePrismaSchemaBuilder } from "../constants/schema_builder.js";
+import {
+  indexFileProvider,
+  redisBootstrapFileProvider,
+  redisClientProvider,
+  redisConfigProvider,
+  redisErrorsProvider,
+  redisTypesProvider,
+} from "../constants/redis_static.js";
 
 // BUG FIX: `.pathname` on a file:// URL leaves a leading slash on Windows
 // (e.g. "/C:/Users/..."), which breaks path.join downstream. fileURLToPath
@@ -102,6 +110,7 @@ export async function copyTemplate(
       config.database,
       config.language,
       config.projectName,
+      config.useRedis,
       config.orm,
     );
 
@@ -128,6 +137,7 @@ export async function copyTemplate(
       config.projectName,
       config.database,
       config.orm,
+      config.useRedis,
     );
   }
 
@@ -143,7 +153,13 @@ export async function copyTemplate(
       config.projectName,
       config.database,
       config.orm,
+      config.useRedis,
     );
+  }
+
+  //! Redis configuration
+  if (config.useRedis === true) {
+    await configureRedis(targetDir, config.language);
   }
 
   // Optional extras are independent of each other — copy concurrently.
@@ -229,6 +245,7 @@ async function addPrismaConfig(
   database: ProjectConfig["database"],
   language: ProjectConfig["language"],
   projectName: ProjectConfig["projectName"],
+  useRedis: ProjectConfig["useRedis"],
   orm: ProjectConfig["orm"],
 ): Promise<void> {
   const modelFilePath = path.join(targetDir, "src", "models", "subatom.prisma");
@@ -293,7 +310,7 @@ async function addPrismaConfig(
     // __env config
     fs.outputFile(
       prisma_env_conf,
-      envConfigForRelationalDb(language, database, orm),
+      envConfigForRelationalDb(language, database, orm, useRedis),
       "utf-8",
     ),
   ];
@@ -311,7 +328,7 @@ async function addPrismaConfig(
       ),
       fs.writeFile(
         mainFilePath,
-        mainFileContent(database, orm, language, projectName),
+        mainFileContent(database, orm, language, projectName, useRedis),
         "utf-8",
       ),
     );
@@ -329,6 +346,7 @@ async function addMongooseConfig(
   projectName: ProjectConfig["projectName"],
   database: ProjectConfig["database"],
   orm: ProjectConfig["orm"],
+  useRedis: ProjectConfig["useRedis"],
 ): Promise<void> {
   const modelFilePath = path.join(
     targetDir,
@@ -365,10 +383,10 @@ async function addMongooseConfig(
     fs.outputFile(mongooseConfigPath, mongoDBConfig(language), "utf-8"),
     fs.outputFile(envSamplePath, env_for_mongoose, "utf-8"),
     fs.outputFile(modelFilePath, mongooseSchema(language), "utf-8"),
-    fs.outputFile(mongooseEnvConfig, envConfigForMongoose(language), "utf-8"),
+    fs.outputFile(mongooseEnvConfig, envConfigForMongoose(language, useRedis), "utf-8"),
     fs.writeFile(
       mainFilePath,
-      mainFileContent(database, orm, language, projectName),
+      mainFileContent(database, orm, language, projectName, useRedis),
       "utf-8",
     ),
   ]);
@@ -383,6 +401,7 @@ export async function addDrizzleConfig(
   projectName: ProjectConfig["projectName"],
   database: ProjectConfig["database"],
   orm: ProjectConfig["orm"],
+  useRedis: ProjectConfig["useRedis"],
 ): Promise<void> {
   if (database === "mongodb") {
     throw new Error("Cannot attach Drizzle configuration to MongoDB.");
@@ -392,12 +411,6 @@ export async function addDrizzleConfig(
 
   // Path resolution alignment (all schema and pool paths located under src/db)
   const mainFilePath = path.join(targetDir, `main.${ext}`);
-
-  const rootDrizzleDir = path.join(
-    targetDir,
-    "drizzle",
-    language === "ts" ? "schema.ts" : "schema.js",
-  );
 
   const drizzleConfigFilePath = path.join(targetDir, `drizzle.config.${ext}`);
 
@@ -435,7 +448,7 @@ HOST="localhost"
     // main.ts
     fs.outputFile(
       mainFilePath,
-      mainFileContent(database, orm, language, projectName),
+      mainFileContent(database, orm, language, projectName, useRedis),
       "utf-8",
     ),
 
@@ -468,7 +481,7 @@ HOST="localhost"
     // /src/config/__env.ts
     fs.outputFile(
       drizzleEnvConf,
-      envConfigForRelationalDb(language, database, orm),
+      envConfigForRelationalDb(language, database, orm, useRedis),
       "utf-8",
     ),
   ];
@@ -492,6 +505,57 @@ HOST="localhost"
   }
 
   await Promise.all(jobs);
+}
+
+//! ---------- REDIS CONFIGURATION -----------
+export async function configureRedis(
+  targetDir: string,
+  language: ProjectConfig["language"],
+) {
+  const redis_directory = path.join(targetDir, "src", "redis");
+
+  const jobs: Promise<void>[] = [
+    // redis-client.ts
+    fs.outputFile(
+      path.join(redis_directory, `redis-client.${language}`),
+      redisClientProvider(language),
+      "utf-8",
+    ),
+    // redis.config.ts
+    fs.outputFile(
+      path.join(redis_directory, `redis.config.${language}`),
+      redisConfigProvider(language),
+      "utf-8",
+    ),
+    // redis.errors.ts
+    fs.outputFile(
+      path.join(redis_directory, `redis.errors.${language}`),
+      redisErrorsProvider(language),
+      "utf-8",
+    ),
+    //index.ts
+    fs.outputFile(
+      path.join(redis_directory, `index.${language}`),
+      indexFileProvider(language),
+      "utf-8",
+    ),
+    // redis.bootstrap.ts
+    fs.outputFile(
+      path.join(redis_directory, `redis.bootstrap.${language}`),
+      redisBootstrapFileProvider(language),
+      "utf-8",
+    ),
+  ];
+
+  if (language === "ts") {
+    jobs.push(
+      fs.outputFile(
+        path.join(redis_directory, `redis.types.${language}`),
+        redisTypesProvider,
+        "utf-8",
+      ),
+    );
+  }
 }
 
 function slugify(label: string): string {
