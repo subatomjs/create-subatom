@@ -1,0 +1,139 @@
+#!/usr/bin/expect -f
+# Expect driver for create-subatom interactive CLI
+#
+# Usage:
+#   expect expect-driver.exp <project-name> <target-dir> <cli-path> \
+#                            <language> <redis> <eslint> <vitest> <orm> <database>
+#
+# Where:
+#   language : ts | js
+#   redis    : yes | no
+#   eslint   : yes | no
+#   vitest   : yes | no
+#   orm      : prisma | drizzle | mongoose
+#   database : postgresql | mysql | sqlite | mongodb (mongodb only valid for mongoose)
+#
+# Note: For confirm prompts, typing "y" or "n" submits immediately.
+#       For select prompts, arrow keys navigate and Enter confirms.
+
+set timeout 600
+set project_name [lindex $argv 0]
+set target_dir   [lindex $argv 1]
+set cli_path     [lindex $argv 2]
+set language     [lindex $argv 3]
+set redis        [lindex $argv 4]
+set eslint       [lindex $argv 5]
+set vitest       [lindex $argv 6]
+set orm          [lindex $argv 7]
+set database     [lindex $argv 8]
+
+# Change to target dir FIRST - CLI uses process.cwd() to create project
+cd $target_dir
+
+# Spawn the CLI with the project name as arg (skips name prompt)
+spawn node $cli_path $project_name
+
+# Wait for the intro banner
+expect {
+    "create-subatom" { }
+    timeout { puts "FAIL: intro banner not shown"; exit 1 }
+}
+
+# ---------------------------------------------------------------------------
+# 1. Select a language (TypeScript default, JavaScript = down + Enter)
+# ---------------------------------------------------------------------------
+expect {
+    "Select a language" { }
+    timeout { puts "FAIL: language prompt not shown"; exit 1 }
+}
+if { $language == "js" } {
+    send "\033\[B\r"
+} else {
+    send "\r"
+}
+
+# ---------------------------------------------------------------------------
+# 2. Would you like to configure Redis? (default No)
+# ---------------------------------------------------------------------------
+expect {
+    "Would you like to configure Redis" { }
+    timeout { puts "FAIL: redis prompt not shown"; exit 1 }
+}
+if { $redis == "yes" } {
+    send "y"
+} else {
+    send "n"
+}
+
+# ---------------------------------------------------------------------------
+# 3. Would you like to setup ESLint? (default Yes)
+# ---------------------------------------------------------------------------
+expect {
+    "Would you like to setup ESLint" { }
+    timeout { puts "FAIL: eslint prompt not shown"; exit 1 }
+}
+if { $eslint == "yes" } {
+    send "y"
+} else {
+    send "n"
+}
+
+# ---------------------------------------------------------------------------
+# 4. Would you like to add Vitest? (default No)
+# ---------------------------------------------------------------------------
+expect {
+    "Would you like to add Vitest" { }
+    timeout { puts "FAIL: vitest prompt not shown"; exit 1 }
+}
+if { $vitest == "yes" } {
+    send "y"
+} else {
+    send "n"
+}
+
+# ---------------------------------------------------------------------------
+# 5. Select an ORM (Prisma default, Drizzle = down+Enter, Mongoose = down down+Enter)
+# ---------------------------------------------------------------------------
+expect {
+    "Select an ORM" { }
+    timeout { puts "FAIL: orm prompt not shown"; exit 1 }
+}
+switch -- $orm {
+    "prisma"   { send "\r" }
+    "drizzle"  { send "\033\[B\r" }
+    "mongoose" { send "\033\[B\033\[B\r" }
+    default    { puts "FAIL: unknown orm '$orm'"; exit 1 }
+}
+
+# ---------------------------------------------------------------------------
+# 6. Select a database
+#    Mongoose skips this prompt (always MongoDB).
+#    Others default to PostgreSQL (Enter), MySQL (down+Enter), SQLite (down down+Enter).
+# ---------------------------------------------------------------------------
+if { $orm == "mongoose" } {
+    # No database prompt - MongoDB is implied
+} else {
+    expect {
+        "Select a database" { }
+        timeout { puts "FAIL: database prompt not shown"; exit 1 }
+    }
+    switch -- $database {
+        "postgresql" { send "\r" }
+        "mysql"      { send "\033\[B\r" }
+        "sqlite"     { send "\033\[B\033\[B\r" }
+        default      { puts "FAIL: unknown database '$database'"; exit 1 }
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Wait for completion - look for outro message
+# ---------------------------------------------------------------------------
+expect {
+    "Project created" { }
+    "Happy hacking" { }
+    timeout { puts "FAIL: project not created"; exit 1 }
+}
+
+# Wait for process to exit
+expect eof
+puts "SUCCESS: CLI completed"

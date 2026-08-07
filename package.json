@@ -36,14 +36,17 @@
     "build": "npm run clean && tsc -p tsconfig.json && tsx src/helpers/copyFolder.ts",
     "dev": "tsx src/index.ts",
     "prepublishOnly": "npm run build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:e2e": "node tests/e2e/run-e2e.mjs"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^26.1.2",
+    "@vitest/coverage-v8": "^4.1.10",
     "cpy-cli": "^7.0.0",
     "tsx": "^4.23.1",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
