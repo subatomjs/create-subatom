@@ -1,6 +1,6 @@
 // src/helpers/install-deps.ts
 import { execa } from "execa";
-import { detectPackageManager } from "./detect-package-manager.js";
+import detectPackageManager from "./packages/detectPackageManager.js";
 
 export async function installDeps(targetDir: string): Promise<void> {
   const pm = detectPackageManager();

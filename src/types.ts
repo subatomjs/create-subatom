@@ -12,6 +12,8 @@ export type Database = 'postgresql' | 'mysql' | 'sqlite' | 'mongodb';
 
 export type PackageManager = 'npm' | 'pnpm' | 'yarn' | 'bun';
 
+export type SqlDatabase = Exclude<Database, "mongodb">;
+
 /**
  * The full set of answers collected from the user during the prompt flow.
  * This is the single object passed into every downstream step:
@@ -52,4 +54,11 @@ export interface PackageManagerInfo {
   name: PackageManager;
   installCommand: string[];
   runCommand: (script: string) => string[];
+}
+
+export interface OutroConfig {
+  projectName: string;
+  language: "js" | "ts";
+  orm: Orm;
+  database: string;
 }

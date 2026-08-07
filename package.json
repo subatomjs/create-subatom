@@ -33,7 +33,7 @@
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "build": "npm run clean && tsc -p tsconfig.json && tsx src/helpers/copy-folder.ts",
+    "build": "npm run clean && tsc -p tsconfig.json && tsx src/helpers/copyFolder.ts",
     "dev": "tsx src/index.ts",
     "prepublishOnly": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"

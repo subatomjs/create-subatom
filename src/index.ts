@@ -4,12 +4,15 @@ import pc from "picocolors";
 import path from "node:path";
 
 import { runPrompts } from "./prompt.js";
-import { copyTemplate } from "./helpers/copy-template.js";
-import { mergePackageJson } from "./helpers/merge-package-json.js";
-import { installDeps } from "./helpers/install-deps.js";
-import { gitInit } from "./helpers/git-init.js";
-import { resolveProjectNameArg, InvalidProjectNameError } from "./helpers/resolve-project-name.js";
-import { buildOutroMessage } from "./helpers/format-outro.js";
+import { installDeps } from "./helpers/installDeps.js";
+import { gitInit } from "./helpers/gitInit.js";
+import {
+  resolveProjectNameArg,
+  InvalidProjectNameError,
+} from "./helpers/resolveProjectName.js";
+import { buildOutroMessage } from "./helpers/formatOutro.js";
+import handleCopyTemplate from "./helpers/copy-template/handleCopyTemplate.js";
+import mergePackageJson from "./helpers/packages/package-json/mergePackageJson.js";
 
 async function main() {
   intro(pc.bgCyan(pc.black(" create-subatom ")));
@@ -36,7 +39,7 @@ async function main() {
 
   try {
     s.start("Creating project structure");
-    await copyTemplate(config as unknown as any, targetDir);
+    await handleCopyTemplate(config as unknown as any, targetDir);
     s.stop("Project structure created");
 
     s.start("Configuring package.json");

@@ -1,13 +1,12 @@
-import { Language } from "../types.js";
-import { schemaContent } from "./static_content.js";
+import { Language } from "../../../types.js";
+import schemaFileContent from "./schema-prisma-content.js";
 
-const handlePrismaSchemaBuilder = (
+const prismaSchemaBuilderScript = (
   target_path: string,
   database: "postgresql" | "mysql" | "sqlite" | string,
   language: "ts" | "js" | string,
 ) => {
-  return `
-  ${language === "ts" ? '/// <reference types="node" />' : ""}
+  return `${language === "ts" ? '/// <reference types="node" />' : ""}
 import fs from "fs";
 import path from "path";
 
@@ -55,7 +54,7 @@ for (const file of files) {
 
 // Header
 // Cast database to any to satisfy schemaContent's expected SqlDatabase type
-const header = ${JSON.stringify(schemaContent(database as any, language as Language))};
+const header = ${JSON.stringify(schemaFileContent(database as any, language as Language))};
 
 // Write final schema.prisma
 fs.writeFileSync(outputFile, header + "\\n\\n" + combinedModules.trim());
@@ -63,4 +62,4 @@ console.log("✅ Prisma schema built successfully!");
 `;
 };
 
-export { handlePrismaSchemaBuilder };
+export default prismaSchemaBuilderScript
