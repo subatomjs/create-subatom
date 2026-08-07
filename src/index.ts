@@ -14,17 +14,25 @@ import { buildOutroMessage } from "./helpers/formatOutro.js";
 import handleCopyTemplate from "./helpers/copy-template/handleCopyTemplate.js";
 import mergePackageJson from "./helpers/packages/package-json/mergePackageJson.js";
 
-async function main() {
+export async function main(resolver: (arg?: string) => { name: string | undefined; useCurrentDir: boolean } = resolveProjectNameArg) {
   intro(pc.bgCyan(pc.black(" create-subatom ")));
 
   let resolved: { name: string | undefined; useCurrentDir: boolean };
   try {
-    resolved = resolveProjectNameArg(process.argv[2]);
+    resolved = resolver(process.argv[2]);
   } catch (err) {
-    if (err instanceof InvalidProjectNameError) {
-      cancel(`${pc.red(err.message)}\n\n${pc.dim(err.cause)}`);
+    // Be defensive: `InvalidProjectNameError` may not be available in some
+    // mocked environments, so avoid using `instanceof` directly without a
+    // safety check which can itself throw. Prefer a name-based fallback.
+    const isInvalidNameError =
+      (err && (err as any).name === "InvalidProjectNameError") ||
+      (typeof InvalidProjectNameError !== "undefined" && err instanceof InvalidProjectNameError);
+
+    if (isInvalidNameError) {
+      cancel(`${pc.red((err as any).message)}\n\n${pc.dim((err as any).cause)}`);
       process.exit(1);
     }
+
     throw err;
   }
 
@@ -62,4 +70,7 @@ async function main() {
   outro(buildOutroMessage(config));
 }
 
-main();
+// Only auto-run when not under test to allow stable unit testing of `main()`.
+if (process.env.NODE_ENV !== 'test') {
+  main();
+}
