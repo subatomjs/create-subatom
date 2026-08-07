@@ -9,14 +9,25 @@ const SNIPPET_FILENAME = "package.snippet.json";
 
 const SNIPPET_PATTERN = /^package\.snippet(?:\..+)?\.json$/;
 
-const redisEnvironmentVariable:string[] = [
-  "REDIS_URL=redis://127.0.0.1:6379/",
-  "REDIS_KEY_PREFIX=subatom_app:",
-  "REDIS_REQUIRED=false",
-  "REDIS_CONNECT_TIMEOUT_MS=10000",
-  "REDIS_SHUTDOWN_TIMEOUT_MS=5000",
-  "REDIS_DEBUG=false",
-]
+const redisEnvironmentVariable: { key: string; value: string }[] = [
+  { key: "REDIS_URL", value: "'redis://127.0.0.1:6379/'" },
+  { key: "REDIS_KEY_PREFIX", value: "'subatom_app:'" },
+  { key: "REDIS_REQUIRED", value: "false" },
+  { key: "REDIS_CONNECT_TIMEOUT_MS", value: "10000" },
+  { key: "REDIS_SHUTDOWN_TIMEOUT_MS", value: "5000" },
+  { key: "REDIS_DEBUG", value: "false" },
+];
+
+// Generates valid `KEY: process.env.KEY || default,` lines,
+// consistent with the rest of the environment object.
+function redisEnvLines(isTs: boolean): string {
+  return redisEnvironmentVariable
+    .map(({ key, value }) => {
+      const cast = isTs ? " as string" : "";
+      return `  ${key}: process.env.${key}${cast} || ${value},`;
+    })
+    .join("\n");
+}
 
 // .env create
 function dotEnvFileContent(): string {
@@ -214,7 +225,7 @@ const environment = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: Number.isFinite(Number(process.env.PORT)) && process.env.PORT ? Number(process.env.PORT) : 8080,
   HOST: process.env.HOST || 'localhost',
-  ${useRedis === true ? [...redisEnvironmentVariable] : ""}
+  ${useRedis === true ? redisEnvLines(true) : ""}
 };
 
 const __env = Object.freeze(environment);
@@ -230,7 +241,7 @@ const environment = {
     NODE_ENV: process.env.NODE_ENV as string || "",
     PORT: Number(process.env.PORT) || 8080,
     HOST: process.env.HOST as string || "localhost",
-    ${useRedis === true ? [...redisEnvironmentVariable] : ""}
+    ${useRedis === true ? redisEnvLines(true) : ""}
 
 }
 const __env = Object.freeze(environment);
@@ -275,7 +286,7 @@ const environment = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: Number.isFinite(Number(process.env.PORT)) && process.env.PORT ? Number(process.env.PORT) : 8080,
   HOST: process.env.HOST || 'localhost',
-  ${useRedis === true ? [...redisEnvironmentVariable] : ""}
+  ${useRedis === true ? redisEnvLines(false) : ""}
 };
 
 const __env = Object.freeze(environment);
@@ -290,7 +301,7 @@ const environment = {
     NODE_ENV: process.env.NODE_ENV || "",
     PORT: Number(process.env.PORT) || 8080,
     HOST: process.env.HOST || "localhost",
-    ${useRedis === true ? [...redisEnvironmentVariable] : ""}
+    ${useRedis === true ? redisEnvLines(false) : ""}
 
 }
 const __env = Object.freeze(environment);
