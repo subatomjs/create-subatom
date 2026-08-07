@@ -1,6 +1,6 @@
 {
   "name": "create-subatom",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "description": "CLI tool of subatom framework.",
   "type": "module",
   "main": "./dist/index.js",
