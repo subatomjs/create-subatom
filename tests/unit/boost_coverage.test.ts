@@ -98,8 +98,8 @@ describe('Boost coverage by calling content generators', () => {
     const pool = new dbPoolContent('ts', 'postgresql');
     expect(typeof pool.generateCode()).toBe('string');
     expect(typeof drizzleMigrationScript()).toBe('string');
-    expect(typeof dbReset()).toBe('string');
-    expect(typeof dbUrlFile()).toBe('string');
+    expect(typeof dbReset('ts')).toBe('string');
+    expect(typeof dbUrlFile('ts')).toBe('string');
     expect(typeof sqliteSeed()).toBe('string');
   });
 

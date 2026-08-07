@@ -15,7 +15,7 @@ describe('handlePackageSnippetUpdate', () => {
     const sample = JSON.stringify({ name: 'x' });
     readBehavior = async () => sample;
 
-    const writeSpy = vi.fn(async () => {});
+    const writeSpy = vi.fn(async (_p: string, _d: string) => {});
     writeBehavior = (p, d) => writeSpy(p, d);
 
     const fn = (await import('../../src/helpers/copy-template/handlePackageSnippetUpdate.ts')).default;

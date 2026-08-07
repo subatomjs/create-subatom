@@ -4,7 +4,6 @@ vi.mock('execa', () => ({ execa: vi.fn() }));
 vi.mock('fs-extra', () => ({ pathExists: vi.fn(), writeFile: vi.fn() }));
 
 import { execa } from 'execa';
-import fs from 'fs-extra';
 import { gitInit } from '../../src/helpers/gitInit.ts';
 
 describe('gitInit', () => {

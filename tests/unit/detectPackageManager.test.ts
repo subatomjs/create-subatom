@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { describe, it, expect, afterEach } from 'vitest';
 import detect from '../../src/helpers/packages/detectPackageManager.ts';
 
