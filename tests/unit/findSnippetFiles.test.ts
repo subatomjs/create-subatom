@@ -1,8 +1,9 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: explanation */
 import { describe, it, expect, vi } from 'vitest';
 
 vi.resetModules();
 
-// Provide a mock for fs-extra.readdir
+
 let readdirBehavior: (dir: string, opts: any) => Promise<any[]> = async () => [];
 vi.mock('fs-extra', () => ({ default: { readdir: (dir: string, opts: any) => readdirBehavior(dir, opts) } }));
 
@@ -29,5 +30,14 @@ describe('findSnippetFiles', () => {
     const find = (await import('../../src/helpers/packages/package-json/findSnippetFiles.ts')).default;
     const res = await find('/root');
     expect(res).toEqual([]);
+  });
+
+  it('ignores entries that are neither files nor directories', async () => {
+    readdirBehavior = async () => [
+      { name: 'socket', isDirectory: () => false, isFile: () => false },
+    ];
+
+    const find = (await import('../../src/helpers/packages/package-json/findSnippetFiles.ts')).default;
+    await expect(find('/root')).resolves.toEqual([]);
   });
 });

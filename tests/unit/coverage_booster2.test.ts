@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: explanation */
 import { describe, it, expect } from 'vitest';
 
 describe('drizzle constants coverage booster', () => {

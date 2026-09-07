@@ -1,4 +1,4 @@
-import { ProjectConfig } from "../../types.js";
+import type { ProjectConfig } from "../../types.js";
 import writeSnippet from "./writeSnippet.js";
 import writeEslintConfig from "./writeEslintConfig.js";
 import {

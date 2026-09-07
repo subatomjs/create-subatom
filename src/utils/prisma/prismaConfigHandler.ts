@@ -1,6 +1,6 @@
 import fs from "fs-extra";
 import path from "node:path";
-import { ProjectConfig } from "../../types.js";
+import type { ProjectConfig } from "../../types.js";
 import {
   envConfigContentRelationalDb,
   mainFileContent,
@@ -85,6 +85,7 @@ async function prismaConfigHandler(
     //todo: (2) prisma file...
     fs.outputFile(
       prisma_file_path,
+      // biome-ignore lint/suspicious/noExplicitAny: explanation
       prismaClientGenerator(database as any, language),
       "utf-8",
     ),

@@ -1,6 +1,6 @@
 import fs from "fs-extra";
 import path from "node:path";
-import { PackageJsonSnippet } from "../../types.js";
+import type { PackageJsonSnippet } from "../../types.js";
 
 
 

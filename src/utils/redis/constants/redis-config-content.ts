@@ -1,5 +1,5 @@
 // redis-config-content.ts
-import { Language } from "../../../types.js";
+import type { Language } from "../../../types.js";
 
 function redisConfigFileContent(language: Language): string {
   if (language === "ts") {

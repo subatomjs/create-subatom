@@ -1,5 +1,6 @@
 import fs from "fs-extra";
-import { Language } from "../../types.js";
+import type { Language } from "../../types.js";
+import { atomicWriteFile } from "../atomicWriteFile.js";
 
 
 async function handlePackageSnippetUpdate(
@@ -21,7 +22,7 @@ async function handlePackageSnippetUpdate(
         : "node scripts/schema_builder.js";
 
     // 4. Save formatted JSON back to file
-    await fs.writeFile(filePath, JSON.stringify(snippet, null, 2), "utf8");
+    await atomicWriteFile(filePath, `${JSON.stringify(snippet, null, 2)}\n`);
     console.log("Snippet updated successfully!");
   } catch (error:unknown) {
     console.error("Failed to update snippet:", error);

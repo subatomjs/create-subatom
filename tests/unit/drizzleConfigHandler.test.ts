@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: explanation */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('fs-extra', () => ({
@@ -13,14 +14,27 @@ describe('drizzleConfigHandler', () => {
 
   it('throws for mongodb database', async () => {
     await expect(
-      drizzleConfigHandler('/tmp', 'ts' as any, 'app', 'mongodb' as any, 'drizzle' as any, false),
+      drizzleConfigHandler('/tmp', 'ts' as any, 'mongodb' as any, 'drizzle' as any, false, false),
     ).rejects.toThrow('Cannot attach Drizzle configuration to MongoDB.');
   });
 
   it('writes files for postgresql', async () => {
-    // @ts-ignore
+    // @ts-expect-error
     fs.outputFile.mockResolvedValue(undefined);
-    await drizzleConfigHandler('/tmp', 'ts' as any, 'app', 'postgresql' as any, 'drizzle' as any, false);
+    await drizzleConfigHandler('/tmp', 'ts' as any, 'postgresql' as any, 'drizzle' as any, false, false);
     expect(fs.outputFile).toHaveBeenCalled();
   });
+
+  it.each(['mysql', 'sqlite'])('writes database-specific files for %s', async (database) => {
+    // @ts-expect-error
+    fs.outputFile.mockResolvedValue(undefined);
+    await drizzleConfigHandler('/tmp', 'js' as any, database as any, 'drizzle' as any, true, true);
+    expect(fs.outputFile).toHaveBeenCalled();
+  });
+
+  it('rejects unsupported database dialects', async () => {
+    await expect(drizzleConfigHandler('/tmp', 'ts' as any, 'none' as any, 'drizzle' as any, false, false))
+      .rejects.toThrow('Unsupported database dialect');
+  });
 });
+

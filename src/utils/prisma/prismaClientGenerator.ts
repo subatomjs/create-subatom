@@ -1,4 +1,4 @@
-import { Language, SqlDatabase } from "../../types.js";
+import type { Language, SqlDatabase } from "../../types.js";
 import mysqlClientFileContent from "./constants/mysql-client-content.js";
 import postgresClientFileContent from "./constants/postgres-client-content.js";
 import sqliteClientFileContent from "./constants/sqlite-client-content.js";

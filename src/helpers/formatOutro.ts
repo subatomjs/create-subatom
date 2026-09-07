@@ -1,5 +1,5 @@
 import pc from "picocolors";
-import { OutroConfig } from "../types.js";
+import type { OutroConfig } from "../types.js";
 
 
 
@@ -46,9 +46,9 @@ export function buildOutroMessage(config: OutroConfig): string {
   const lines: string[] = [];
   steps.forEach(({ cmd, notes }, i) => {
     lines.push(`  ${pc.dim(`${i + 1}.`)} ${pc.cyan(cmd)}`);
-    notes?.forEach((note) =>
-      lines.push(`     ${pc.yellow("→")} ${pc.dim(note)}`),
-    );
+    notes?.forEach((note) => {
+      lines.push(`     ${pc.yellow("→")} ${pc.dim(note)}`);
+    });
   });
 
   return [title, "", ...lines, "", pc.dim("Happy hacking! 🚀")].join("\n");

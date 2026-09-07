@@ -1,5 +1,5 @@
 // redis-client-content.ts
-import { Language } from "../../../types.js";
+import type { Language } from "../../../types.js";
 
 function redisClientFileContent(language: Language): string {
   if (language === "ts") {

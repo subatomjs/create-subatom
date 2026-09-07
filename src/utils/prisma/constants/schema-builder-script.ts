@@ -1,4 +1,5 @@
-import { Language } from "../../../types.js";
+/** biome-ignore-all lint/suspicious/noExplicitAny: explanation */
+import type { Language } from "../../../types.js";
 import schemaFileContent from "./schema-prisma-content.js";
 
 const prismaSchemaBuilderScript = (

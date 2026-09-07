@@ -1,5 +1,5 @@
 // redis-error-content.ts
-import { Language } from "../../../types.js";
+import type { Language } from "../../../types.js";
 
 
 function redisErrorsFileContent(language: Language): string {

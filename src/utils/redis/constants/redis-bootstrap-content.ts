@@ -1,5 +1,5 @@
 // redis-bootstrap-content.ts 
-import { Language } from "../../../types.js";
+import type { Language } from "../../../types.js";
 
 
 function redisBootstrapFileContent(language: Language): string {

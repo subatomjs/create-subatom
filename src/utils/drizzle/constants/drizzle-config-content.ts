@@ -1,4 +1,4 @@
-import { Database, Language } from "../../../types.js";
+import type { Database, Language } from "../../../types.js";
 
 function drizzleConfigFileContent(
   database: Database,

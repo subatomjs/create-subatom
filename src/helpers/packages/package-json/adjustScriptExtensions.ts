@@ -1,4 +1,4 @@
-import { ProjectConfig } from "../../../types.js";
+import type { ProjectConfig } from "../../../types.js";
 
 function adjustScriptExtensions(
   scripts: Record<string, string>,

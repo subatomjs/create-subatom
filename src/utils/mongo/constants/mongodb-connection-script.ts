@@ -1,4 +1,4 @@
-import { Language } from "../../../types.js";
+import type { Language } from "../../../types.js";
 
 const mongoDbConnectionScript = (fileType: Language): string => {
   if (fileType === "ts") {

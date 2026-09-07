@@ -1,139 +1,136 @@
 #!/usr/bin/expect -f
-# Expect driver for create-subatom interactive CLI
-#
-# Usage:
-#   expect expect-driver.exp <project-name> <target-dir> <cli-path> \
-#                            <language> <redis> <eslint> <vitest> <orm> <database>
-#
-# Where:
-#   language : ts | js
-#   redis    : yes | no
-#   eslint   : yes | no
-#   vitest   : yes | no
-#   orm      : prisma | drizzle | mongoose
-#   database : postgresql | mysql | sqlite | mongodb (mongodb only valid for mongoose)
-#
-# Note: For confirm prompts, typing "y" or "n" submits immediately.
-#       For select prompts, arrow keys navigate and Enter confirms.
 
-set timeout 600
+set timeout 90
 set project_name [lindex $argv 0]
-set target_dir   [lindex $argv 1]
-set cli_path     [lindex $argv 2]
-set language     [lindex $argv 3]
-set redis        [lindex $argv 4]
-set eslint       [lindex $argv 5]
-set vitest       [lindex $argv 6]
-set orm          [lindex $argv 7]
-set database     [lindex $argv 8]
+set target_dir [lindex $argv 1]
+set cli_path [lindex $argv 2]
+set language [lindex $argv 3]
+set redis [lindex $argv 4]
+set eslint [lindex $argv 5]
+set vitest [lindex $argv 6]
+set orm [lindex $argv 7]
+set database [lindex $argv 8]
 
-# Change to target dir FIRST - CLI uses process.cwd() to create project
-cd $target_dir
-
-# Spawn the CLI with the project name as arg (skips name prompt)
-spawn node $cli_path $project_name
-
-# Wait for the intro banner
-expect {
-    "create-subatom" { }
-    timeout { puts "FAIL: intro banner not shown"; exit 1 }
+proc fail {message} {
+    puts stderr "FAIL: $message"
+    exit 1
 }
 
-# ---------------------------------------------------------------------------
-# 1. Select a language (TypeScript default, JavaScript = down + Enter)
-# ---------------------------------------------------------------------------
-expect {
-    "Select a language" { }
-    timeout { puts "FAIL: language prompt not shown"; exit 1 }
+if {[catch {cd $target_dir} error_message]} {
+    fail "could not enter target directory: $error_message"
 }
-if { $language == "js" } {
-    send "\033\[B\r"
+
+expect_before {
+    -re {Project name:|Directory name:} {
+        send -- "$project_name\r"
+        exp_continue
+    }
+    -re {(?i)(overwrite|replace|already exists).*\([yY]/[nN]\)} {
+        send -- "n\r"
+        exp_continue
+    }
+    -re {(?i)(install dependencies|install.*dependencies|skip.*install).*} {
+        send -- "n\r"
+        exp_continue
+    }
+}
+
+set env(TERM) xterm-256color
+set env(CI) 1
+set env(FORCE_COLOR) 1
+
+spawn -noecho node $cli_path $project_name
+
+expect {
+    -re {create-subatom} {}
+    timeout { fail "intro banner not shown" }
+    eof { fail "CLI exited before the intro banner" }
+}
+
+expect {
+    -re {Select a language:} {}
+    timeout { fail "language prompt not shown" }
+    eof { fail "CLI exited before the language prompt" }
+}
+if {$language eq "js"} {
+    send -- "\033\[B\r"
 } else {
-    send "\r"
+    send -- "\r"
 }
 
-# ---------------------------------------------------------------------------
-# 2. Would you like to configure Redis? (default No)
-# ---------------------------------------------------------------------------
 expect {
-    "Would you like to configure Redis" { }
-    timeout { puts "FAIL: redis prompt not shown"; exit 1 }
-}
-if { $redis == "yes" } {
-    send "y"
-} else {
-    send "n"
-}
-
-# ---------------------------------------------------------------------------
-# 3. Would you like to setup ESLint? (default Yes)
-# ---------------------------------------------------------------------------
-expect {
-    "Would you like to setup ESLint" { }
-    timeout { puts "FAIL: eslint prompt not shown"; exit 1 }
-}
-if { $eslint == "yes" } {
-    send "y"
-} else {
-    send "n"
-}
-
-# ---------------------------------------------------------------------------
-# 4. Would you like to add Vitest? (default No)
-# ---------------------------------------------------------------------------
-expect {
-    "Would you like to add Vitest" { }
-    timeout { puts "FAIL: vitest prompt not shown"; exit 1 }
-}
-if { $vitest == "yes" } {
-    send "y"
-} else {
-    send "n"
-}
-
-# ---------------------------------------------------------------------------
-# 5. Select an ORM (Prisma default, Drizzle = down+Enter, Mongoose = down down+Enter)
-# ---------------------------------------------------------------------------
-expect {
-    "Select an ORM" { }
-    timeout { puts "FAIL: orm prompt not shown"; exit 1 }
+    -re {Select an ORM:} {}
+    timeout { fail "ORM prompt not shown" }
+    eof { fail "CLI exited before the ORM prompt" }
 }
 switch -- $orm {
-    "prisma"   { send "\r" }
-    "drizzle"  { send "\033\[B\r" }
-    "mongoose" { send "\033\[B\033\[B\r" }
-    default    { puts "FAIL: unknown orm '$orm'"; exit 1 }
+    prisma { send -- "\r" }
+    drizzle { send -- "\033\[B\r" }
+    mongoose { send -- "\033\[B\033\[B\r" }
+    none { send -- "\033\[B\033\[B\033\[B\r" }
+    default { fail "unknown ORM '$orm'" }
 }
 
-# ---------------------------------------------------------------------------
-# 6. Select a database
-#    Mongoose skips this prompt (always MongoDB).
-#    Others default to PostgreSQL (Enter), MySQL (down+Enter), SQLite (down down+Enter).
-# ---------------------------------------------------------------------------
-if { $orm == "mongoose" } {
-    # No database prompt - MongoDB is implied
-} else {
+if {$orm ne "mongoose"} {
     expect {
-        "Select a database" { }
-        timeout { puts "FAIL: database prompt not shown"; exit 1 }
+        -re {Select a database} {}
+        timeout { fail "database prompt not shown" }
+        eof { fail "CLI exited before the database prompt" }
     }
     switch -- $database {
-        "postgresql" { send "\r" }
-        "mysql"      { send "\033\[B\r" }
-        "sqlite"     { send "\033\[B\033\[B\r" }
-        default      { puts "FAIL: unknown database '$database'"; exit 1 }
+        postgresql { send -- "\r" }
+        mysql { send -- "\033\[B\r" }
+        sqlite { send -- "\033\[B\033\[B\r" }
+        none { send -- "\033\[B\033\[B\033\[B\033\[B\r" }
+        default { fail "unknown database '$database'" }
     }
 }
 
-# ---------------------------------------------------------------------------
-# Wait for completion - look for outro message
-# ---------------------------------------------------------------------------
 expect {
-    "Project created" { }
-    "Happy hacking" { }
-    timeout { puts "FAIL: project not created"; exit 1 }
+    -re {Would you like to configure Redis} {}
+    timeout { fail "Redis prompt not shown" }
+    eof { fail "CLI exited before the Redis prompt" }
+}
+if {$redis eq "yes"} { send -- "y" } else { send -- "n" }
+
+expect {
+    -re {Would you like to setup ESLint} {}
+    timeout { fail "ESLint prompt not shown" }
+    eof { fail "CLI exited before the ESLint prompt" }
+}
+if {$eslint eq "yes"} { send -- "y" } else { send -- "n" }
+
+expect {
+    -re {Would you like to add Vitest} {}
+    timeout { fail "Vitest prompt not shown" }
+    eof { fail "CLI exited before the Vitest prompt" }
+}
+if {$vitest eq "yes"} { send -- "y" } else { send -- "n" }
+
+expect {
+    -re {Does your project need a WebSocket connection} {}
+    timeout { fail "WebSocket prompt not shown" }
+    eof { fail "CLI exited before the WebSocket prompt" }
+}
+send -- "n"
+
+expect {
+    -re {Project created|Happy hacking} {}
+    timeout { fail "CLI did not report project completion" }
+    eof { fail "CLI exited before reporting project completion" }
 }
 
-# Wait for process to exit
-expect eof
+expect {
+    eof {}
+    timeout { fail "CLI did not terminate after completion" }
+}
+
+if {[catch {wait} wait_result]} {
+    fail "could not read CLI exit status: $wait_result"
+}
+set exit_code [lindex $wait_result 3]
+if {$exit_code ne "0"} {
+    fail "CLI exited with status $exit_code"
+}
 puts "SUCCESS: CLI completed"
+exit 0

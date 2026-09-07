@@ -14,14 +14,14 @@ describe('eslint helpers', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('writeSnippet writes json', async () => {
-    // @ts-ignore
+    // @ts-expect-error
     fs.writeJson.mockResolvedValue(undefined);
     await writeSnippet('/tmp', { devDependencies: {} });
     expect(fs.writeJson).toHaveBeenCalled();
   });
 
   it('writeEslintConfig writes file', async () => {
-    // @ts-ignore
+    // @ts-expect-error
     fs.writeFile.mockResolvedValue(undefined);
     await writeEslintConfig('/tmp', 'content');
     expect(fs.writeFile).toHaveBeenCalled();

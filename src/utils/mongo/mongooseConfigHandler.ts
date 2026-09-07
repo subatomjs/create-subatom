@@ -1,6 +1,6 @@
 import fs from "fs-extra";
 import path from "node:path";
-import { ProjectConfig } from "../../types.js";
+import type { ProjectConfig } from "../../types.js";
 import mongoDbConnectionScript from "./constants/mongodb-connection-script.js";
 import mongooseSchemaContent from "./constants/mongoose-schema-content.js";
 import mongoEnvConfigFileContent from "./constants/mongo-env-conf-content.js";

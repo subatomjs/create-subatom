@@ -1,6 +1,6 @@
 import fs from "fs-extra";
 import path from "node:path";
-import { ProjectConfig } from "../../types.js";
+import type { ProjectConfig } from "../../types.js";
 import {
   envConfigContentRelationalDb,
   mainFileContent,

@@ -1,4 +1,4 @@
-import { Language } from "../../../../types.js";
+import type { Language } from "../../../../types.js";
 
 function databaseResetScript(language: Language) {
   return String.raw`import { sql } from 'drizzle-orm';

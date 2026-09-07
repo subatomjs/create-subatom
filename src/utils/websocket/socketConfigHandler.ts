@@ -1,6 +1,6 @@
 import path from "node:path";
 import fs from "fs-extra";
-import { ProjectConfig } from "../../types.js";
+import type { ProjectConfig } from "../../types.js";
 import socketFileContent from "./constant/socket-file-content.js";
 
 async function socketConfigHandler(

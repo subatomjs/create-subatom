@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: explanation */
 import { describe, it, expect } from 'vitest';
 
 import {
@@ -5,6 +6,7 @@ import {
   mainFileContent,
   subatomConfigContent,
   envConfigContentRelationalDb,
+  serverFileContent,
 } from '../../src/utils/common_content.ts';
 
 import mysqlClientFileContent from '../../src/utils/prisma/constants/mysql-client-content.ts';
@@ -18,11 +20,13 @@ import { prismaClientGenerator } from '../../src/utils/prisma/prismaClientGenera
 import drizzleEnvReq from '../../src/utils/drizzle/constants/env-requirements-content.ts';
 import { subatomSchemaContent as drizzleSubatomSchema } from '../../src/utils/drizzle/constants/subatom-schema-content.ts';
 import drizzleConfigContent from '../../src/utils/drizzle/constants/drizzle-config-content.ts';
+import adjustScriptExtensions from '../../src/helpers/packages/package-json/adjustScriptExtensions.ts';
 import { DatabasePoolForDrizzle as dbPoolContent } from '../../src/utils/drizzle/constants/database-pool-content.ts';
 import { drizzleMigrationScript } from '../../src/utils/drizzle/constants/mysql/drizzle-migration-script.ts';
 import dbReset from '../../src/utils/drizzle/constants/mysql/database-reset-script.ts';
 import dbUrlFile from '../../src/utils/drizzle/constants/mysql/dburl-file-content.ts';
 import sqliteSeed from '../../src/utils/drizzle/constants/sqlite/sqlite-seed-content.ts';
+import redisEnvConfig from '../../src/utils/redis/constants/redis-env-config.ts';
 
 import mongooseSchema from '../../src/utils/mongo/constants/mongoose-schema-content.ts';
 import mongoEnv from '../../src/utils/mongo/constants/mongo-env-conf-content.ts';
@@ -56,6 +60,23 @@ describe('Boost coverage by calling content generators', () => {
     const e2 = envConfigContentRelationalDb('js', 'postgresql', 'prisma', false);
     expect(e1).toContain('DB');
     expect(e2).toContain('DATABASE_URL');
+
+    for (const language of ['js', 'ts'] as const) {
+      for (const database of ['postgresql', 'mysql', 'sqlite'] as const) {
+        for (const orm of ['prisma', 'drizzle'] as const) {
+          for (const useRedis of [false, true]) {
+            for (const useSocket of [false, true]) {
+              expect(mainFileContent(database, orm, language, useRedis, useSocket)).toContain('server');
+            }
+            expect(envConfigContentRelationalDb(language, database, orm, useRedis)).toContain('DATABASE_URL');
+          }
+        }
+      }
+      expect(mainFileContent('mongodb', 'mongoose', language, false, false)).toContain('mongo');
+      expect(mainFileContent('none', 'none', language, false, false)).toContain('server');
+      expect(mainFileContent('none', 'none', language, true, false)).toContain('Redis');
+    }
+    expect(serverFileContent(true, 'js')).toContain('serveStatic');
   });
 
   it('prisma client files and generator', () => {
@@ -71,9 +92,13 @@ describe('Boost coverage by calling content generators', () => {
 
     const s = sqliteClientFileContent('ts');
     expect(s).toContain('PrismaClient');
+    expect(sqliteClientFileContent('js')).toContain('createRequire');
 
-    const schema = schemaPrismaContent('postgresql', 'ts');
-    expect(schema).toContain('generator');
+    for (const database of ['postgresql', 'mysql', 'sqlite'] as const) {
+      for (const language of ['js', 'ts'] as const) {
+        expect(schemaPrismaContent(database, language)).toContain('generator');
+      }
+    }
 
     const sub = subatomPrismaSchema();
     expect(sub.length).toBeGreaterThan(0);
@@ -84,40 +109,59 @@ describe('Boost coverage by calling content generators', () => {
     expect(prismaClientGenerator('postgresql', 'ts')).toContain('PrismaClient');
     expect(prismaClientGenerator('mysql', 'js')).toContain('PrismaClient');
     expect(prismaClientGenerator('sqlite', 'ts')).toContain('PrismaClient');
+    expect(prismaClientGenerator('none' as any, 'js')).toBe('');
 
     // default throws
-    // @ts-ignore
+    // @ts-expect-error
     expect(() => prismaClientGenerator('unsupported', 'ts')).toThrow();
   });
 
   it('drizzle constants return content', () => {
     expect(typeof drizzleEnvReq).toBe('function');
-    expect(drizzleEnvReq('postgresql', true)).toContain('DATABASE_URL');
-    expect(typeof drizzleSubatomSchema('postgresql', 'ts')).toBe('string');
-    expect(typeof drizzleConfigContent('postgresql', 'ts')).toBe('string');
-    const pool = new dbPoolContent('ts', 'postgresql');
-    expect(typeof pool.generateCode()).toBe('string');
+    for (const database of ['postgresql', 'mysql', 'sqlite'] as const) {
+      for (const language of ['js', 'ts'] as const) {
+        expect(drizzleEnvReq(database, false)).toContain('DATABASE_URL');
+        expect(drizzleEnvReq(database, true)).toContain('DATABASE_URL');
+        expect(typeof drizzleSubatomSchema(database, language)).toBe('string');
+        expect(typeof drizzleConfigContent(database, language)).toBe('string');
+        const pool = new dbPoolContent(language, database);
+        expect(typeof pool.generateCode()).toBe('string');
+        expect(typeof dbReset(language)).toBe('string');
+        expect(typeof dbUrlFile(language)).toBe('string');
+      }
+    }
     expect(typeof drizzleMigrationScript()).toBe('string');
-    expect(typeof dbReset('ts')).toBe('string');
-    expect(typeof dbUrlFile('ts')).toBe('string');
     expect(typeof sqliteSeed()).toBe('string');
+    expect(drizzleEnvReq('none' as any, false)).toBe('');
+    expect(() => drizzleEnvReq('unsupported' as any, false)).toThrow();
+    expect(() => new dbPoolContent('ts', 'unsupported' as any).generateCode()).toThrow();
   });
 
   it('mongo and mongoose constants', () => {
-    expect(typeof mongooseSchema('ts')).toBe('string');
-    expect(typeof mongoEnv('ts', true)).toBe('string');
-    expect(typeof mongoConn('ts')).toBe('string');
+    for (const language of ['js', 'ts'] as const) {
+      expect(typeof mongooseSchema(language)).toBe('string');
+      expect(typeof mongoEnv(language, false)).toBe('string');
+      expect(typeof mongoEnv(language, true)).toBe('string');
+      expect(typeof mongoConn(language)).toBe('string');
+    }
   });
 
   it('redis constants and eslint', () => {
-    expect(typeof redisClient('ts')).toBe('string');
-    expect(typeof redisConfig('ts')).toBe('string');
-    expect(typeof redisErrors('ts')).toBe('string');
-    expect(typeof redisIndex('ts')).toBe('string');
-    expect(typeof redisBootstrap('ts')).toBe('string');
+    for (const language of ['js', 'ts'] as const) {
+      expect(typeof redisClient(language)).toBe('string');
+      expect(typeof redisConfig(language)).toBe('string');
+      expect(typeof redisErrors(language)).toBe('string');
+      expect(typeof redisIndex(language)).toBe('string');
+      expect(typeof redisBootstrap(language)).toBe('string');
+      expect(typeof redisEnvConfig(language)).toBe('string');
+    }
     expect(typeof redisTypes).toBe('string');
 
     expect(typeof TS_ESLINT_CONFIG).toBe('string');
     expect(typeof JS_ESLINT_CONFIG).toBe('string');
+    expect(adjustScriptExtensions({ build: 'tsc', start: 'node app.ts' }, 'invalid' as any)).toEqual({
+      build: 'tsc',
+      start: 'node app.ts',
+    });
   });
 });

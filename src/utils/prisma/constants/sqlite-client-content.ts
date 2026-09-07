@@ -1,4 +1,4 @@
-import { Language } from "../../../types.js";
+import type { Language } from "../../../types.js";
 
 function sqliteClientFileContent(language: Language): string {
   if (language === "js") {

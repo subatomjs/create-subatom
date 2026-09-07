@@ -1,11 +1,12 @@
 // src/helpers/merge-package-json.ts
 import fs from "fs-extra";
 import path from "node:path";
-import { PackageJsonSnippet, ProjectConfig } from "../../../types.js";
+import type { PackageJsonSnippet, ProjectConfig } from "../../../types.js";
 import findSnippetFiles from "./findSnippetFiles.js";
 import mergeTwo from "./mergeTwo.js";
 import { sortKeys, toValidPackageName } from "../../sharedHelper.js";
 import adjustScriptExtensions from "./adjustScriptExtensions.js";
+import { atomicWriteFile } from "../../atomicWriteFile.js";
 
 export type PackageJsonShape = PackageJsonSnippet;
 
@@ -22,10 +23,11 @@ async function mergePackageJson(
 
   const snippetPaths = (await findSnippetFiles(targetDir)).sort();
 
+  const snippetsToRemove: string[] = [];
   for (const snippetPath of snippetPaths) {
     const snippet: PackageJsonShape = await fs.readJson(snippetPath);
     rootPackageJson = mergeTwo(rootPackageJson, snippet);
-    await fs.remove(snippetPath);
+    snippetsToRemove.push(snippetPath);
   }
 
   const {
@@ -56,7 +58,12 @@ async function mergePackageJson(
     ...rest,
   };
 
-  await fs.writeJson(rootPackageJsonPath, finalPackageJson, { spaces: 2 });
+  await atomicWriteFile(
+    rootPackageJsonPath,
+    `${JSON.stringify(finalPackageJson, null, 2)}\n`,
+  );
+
+  await Promise.all(snippetsToRemove.map((snippetPath) => fs.remove(snippetPath)));
 }
 
 export default mergePackageJson

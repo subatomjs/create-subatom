@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: explanation */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.resetModules();
@@ -29,9 +30,9 @@ describe('gitInit branches', () => {
   });
 
   it('logs when git not available', async () => {
-    execaBehavior = (cmd: string, args: string[]) => {
-      if (args && args.includes('--is-inside-work-tree')) return Promise.reject(new Error('not repo'));
-      if (args && args.includes('--version')) return Promise.reject(new Error('no git'));
+    execaBehavior = (_cmd: string, args: string[]) => {
+      if (args?.includes('--is-inside-work-tree')) return Promise.reject(new Error('not repo'));
+      if (args?.includes('--version')) return Promise.reject(new Error('no git'));
       return Promise.resolve({ stdout: '' });
     };
 
@@ -48,9 +49,9 @@ describe('gitInit branches', () => {
   });
 
   it('initializes git and writes .gitignore when missing', async () => {
-    execaBehavior = (cmd: string, args: string[]) => {
-      if (args && args.includes('--is-inside-work-tree')) return Promise.reject(new Error('not repo'));
-      if (args && args.includes('--version')) return Promise.resolve({ stdout: 'git' });
+    execaBehavior = (_cmd: string, args: string[]) => {
+      if (args?.includes('--is-inside-work-tree')) return Promise.reject(new Error('not repo'));
+      if (args?.includes('--version')) return Promise.resolve({ stdout: 'git' });
       return Promise.resolve({ stdout: '' });
     };
 
@@ -64,5 +65,25 @@ describe('gitInit branches', () => {
 
     expect(writeFileBehavior).toBeInstanceOf(Function);
     expect(typeof execaBehavior).toBe('function');
+  });
+
+  it('warns when git commit fails', async () => {
+    let callCount = 0;
+    execaBehavior = (_cmd: string, args: string[]) => {
+      callCount += 1;
+      if (args?.includes('--is-inside-work-tree')) return Promise.reject(new Error('not repo'));
+      if (args?.includes('--version')) return Promise.resolve({ stdout: 'git' });
+      if (callCount >= 4) return Promise.reject(new Error('commit failed'));
+      return Promise.resolve({ stdout: '' });
+    };
+    pathExistsBehavior = () => Promise.resolve(true);
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined as any);
+
+    vi.resetModules();
+    const { gitInit } = await import('../../src/helpers/gitInit.ts');
+    await gitInit('/tmp');
+
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Could not initialize git'));
+    consoleSpy.mockRestore();
   });
 });

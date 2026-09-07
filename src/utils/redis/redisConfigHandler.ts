@@ -3,7 +3,7 @@
 import fs from "fs-extra";
 import path from "node:path";
 
-import { ProjectConfig } from "../../types.js";
+import type { ProjectConfig } from "../../types.js";
 import redisClientFileContent from "./constants/redis-client-content.js";
 import redisConfigFileContent from "./constants/redis-config-content.js";
 import redisErrorsFileContent from "./constants/redis-error-content.js";

@@ -12,6 +12,12 @@ export type Database = 'postgresql' | 'mysql' | 'sqlite' | 'mongodb' | 'none';
 
 export type PackageManager = 'npm' | 'pnpm' | 'yarn' | 'bun';
 
+export enum CliExitCode {
+  Success = 0,
+  InvalidProjectName = 1,
+  InitializationFailed = 2,
+}
+
 export type SqlDatabase = Exclude<Database, "mongodb">;
 
 /**

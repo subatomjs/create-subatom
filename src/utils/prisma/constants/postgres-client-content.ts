@@ -1,6 +1,6 @@
 // postgres-client-content.ts
 
-import { Language } from "../../../types.js";
+import type { Language } from "../../../types.js";
 
 function postgresClientFileContent(language: Language): string {
   if (language === "js") {

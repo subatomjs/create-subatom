@@ -72,7 +72,7 @@ async function ensureGitignore(targetDir: string): Promise<void> {
   const exists = await fs.pathExists(gitignorePath);
 
   if (!exists) {
-    const defaultIgnore = ['node_modules', 'dist', '.env', '.env.local', '*.log'].join('\n') + '\n';
+    const defaultIgnore = `${['node_modules', 'dist', '.env', '.env.local', '*.log'].join('\n')}\n`;
     await fs.writeFile(gitignorePath, defaultIgnore, 'utf-8');
   }
 }

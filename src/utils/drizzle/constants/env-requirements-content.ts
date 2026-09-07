@@ -1,4 +1,4 @@
-import { Database } from "../../../types.js";
+import type { Database } from "../../../types.js";
 
 const REDIS_VARIABLES = [
   "REDIS_URL=redis://127.0.0.1:6379/",
@@ -41,7 +41,7 @@ function envRequirementFileContent(
       const config = useRedis
         ? [...baseConfig, ...REDIS_VARIABLES]
         : baseConfig;
-      return config.join("\n") + "\n";
+      return `${config.join("\n")}\n`;
     }
     case "none":
       return ""

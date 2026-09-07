@@ -1,4 +1,4 @@
-import { PackageJsonShape } from "./mergePackageJson.js";
+import type { PackageJsonShape } from "./mergePackageJson.js";
 
 function mergeTwo(
   base: PackageJsonShape,

@@ -12,14 +12,14 @@ describe('installDeps', () => {
   it('calls execa with detected pm', async () => {
     // make detectPackageManager default to npm by env
     process.env.npm_config_user_agent = 'npm/1.0.0';
-    // @ts-ignore
+    // @ts-expect-error
     execa.mockResolvedValue({});
     await installDeps('/tmp');
     expect(execa).toHaveBeenCalled();
   });
 
   it('throws an error when execa fails', async () => {
-    // @ts-ignore
+    // @ts-expect-error
     execa.mockRejectedValue(new Error('fail'));
     await expect(installDeps('/tmp')).rejects.toThrow('Dependency install failed');
   });

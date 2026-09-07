@@ -96,7 +96,7 @@ function mainFileContent(
       dbImports = `import { checkDatabaseConnection, closeDatabase } from "./src/db/db_pool.js";\n`;
       dbConnectLogic = `console.log("⏳ Verifying SQLite (Drizzle) connection...");\n    const healthy = await checkDatabaseConnection();\n    if (!healthy) throw new Error("Database health check failed.");\n    console.log("✅ Connected to SQLite (Drizzle) successfully");\n`;
       dbDisconnectLogic = `console.log("🗄️ [Shutdown] Closing SQLite pool...");\n      closeDatabase();`;
-    } else if (orm === "drizzle") {
+    } else {
       dbImports = `import { db } from "./src/db/db_pool.js";\nimport { sql } from "drizzle-orm";\n`;
       dbConnectLogic = `console.log("⏳ Verifying ${database} (Drizzle) connection...");\n    await db.execute(sql\`SELECT 1\`);\n    console.log("✅ Connected to ${database} (Drizzle) successfully");\n`;
       dbDisconnectLogic = `console.log("🗄️ [Shutdown] Releasing Drizzle connection pool...");`;
@@ -248,7 +248,7 @@ process.on("SIGTERM", () => { closeDatabase(); process.exit(0); });\n\n`
 
 function serverFileContent(useSocket: boolean, language: "ts" | "js") {
   if (!useSocket && language === "ts") {
-    return `import {Subatom, json, urlencoded, serveStatic, type IRequest, type IResponse, serveStatic} from 'subatom';
+    return `import {Subatom, json, urlencoded, serveStatic, type IRequest, type IResponse} from 'subatom';
 import userRouter from "./routes/user.route.js";
 
 const server = new Subatom()
@@ -296,7 +296,7 @@ server.get("/", async(req, res) => {
 export default server
 `;
   } else if (useSocket && language === "js") {
-    return `import { Subatom, SubAtomDocs } from "subatom";
+    return `import { Subatom, SubAtomDocs, serveStatic } from "subatom";
 import { getIO } from "./web-socket/socket.js";
 import userRouter from "./routes/user.route.js";
 

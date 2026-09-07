@@ -1,4 +1,4 @@
-import { Database, Language, SqlDatabase } from "../../../types.js";
+import type { Database, Language, SqlDatabase } from "../../../types.js";
 
 function schemaFileContent(
   database: SqlDatabase | Database,

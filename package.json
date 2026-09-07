@@ -35,13 +35,17 @@
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
     "build": "npm run clean && npm run typecheck && tsdown && tsx src/helpers/copyFolder.ts && chmod +x dist/bin/create.js",
+    "pre-publish": "npm run test:e2e && npm run test:unit-coverage && npm run lint:fix && npm run build",
     "dev": "tsx src/bin/create.ts",
     "prepublishOnly": "npm run build",
     "test:unit": "npx vitest run",
     "test:unit-coverage": "npx vitest run --coverage",
-    "test:e2e": "node tests/e2e/run-e2e.mjs"
+    "test:e2e": "node tests/e2e/run-e2e.mjs",
+    "lint": "biome lint src tests",
+    "lint:fix": "biome lint --write src tests"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.12",
     "@types/fs-extra": "^11.0.4",
     "@types/jest": "^30.0.0",
     "@types/mocha": "^10.0.10",

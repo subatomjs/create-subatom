@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: explanation */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import path from 'node:path';
 
@@ -12,11 +13,10 @@ describe('prismaConfigHandler', () => {
   });
 
   it('writes expected files for prisma typescript project', async () => {
-    // @ts-ignore
     (fs.outputFile as any).mockResolvedValue(undefined);
 
     const target = '/tmp/myproj';
-    await prismaConfigHandler(target, 'postgresql', 'ts', 'myproj', true, 'prisma');
+    await prismaConfigHandler(target, 'postgresql', 'ts', true, 'prisma', true);
 
     // Check that outputFile was called for each expected path
     const calls = (fs.outputFile as any).mock.calls.map((c: any[]) => c[0]);
@@ -29,5 +29,12 @@ describe('prismaConfigHandler', () => {
     expect(calls.some((p: string) => p === path.join(target, 'src', 'models', 'subatom.prisma'))).toBe(true);
     expect(calls.some((p: string) => p === path.join(target, 'prisma', 'schema.prisma'))).toBe(true);
     expect(calls.some((p: string) => p === path.join(target, 'scripts', 'schema_builder.ts'))).toBe(true);
+  });
+
+  it('writes JavaScript files for SQLite without Redis', async () => {
+    (fs.outputFile as any).mockResolvedValue(undefined);
+    const target = '/tmp/myproj';
+    await prismaConfigHandler(target, 'sqlite', 'js', false, 'prisma', true);
+    expect((fs.outputFile as any).mock.calls.some((c: any[]) => c[0] === path.join(target, 'prisma.js'))).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import { PackageManager, PackageManagerInfo } from "../../types.js";
+import type { PackageManager, PackageManagerInfo } from "../../types.js";
 
 // Package managers list 
 const PACKAGE_MANAGERS: Record<PackageManager, PackageManagerInfo> = {

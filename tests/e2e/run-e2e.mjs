@@ -23,14 +23,22 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, "..", "..");
-const CLI_ENTRY = path.join(PROJECT_ROOT, "dist", "index.js");
+const CLI_ENTRY = path.join(PROJECT_ROOT, "dist", "bin", "create.js");
 const EXPECT_DRIVER = path.join(__dirname, "expect-driver.exp");
 
 // ===========================================================================
@@ -77,7 +85,20 @@ const NO_FEATURES_SCENARIO = {
   useVitest: false,
 };
 
-const ALL_SCENARIOS = [...SCENARIOS, NO_FEATURES_SCENARIO];
+const EXISTING_DIRECTORY_SCENARIO = {
+  language: "js",
+  orm: "none",
+  database: "none",
+  useRedis: false,
+  useEslint: false,
+  useVitest: false,
+  preserveExistingFile: true,
+};
+
+const ALL_SCENARIOS = [...SCENARIOS, NO_FEATURES_SCENARIO, EXISTING_DIRECTORY_SCENARIO];
+const ACTIVE_SCENARIOS = process.env.SUBATOM_E2E_SCENARIO_LIMIT
+  ? ALL_SCENARIOS.slice(0, Number.parseInt(process.env.SUBATOM_E2E_SCENARIO_LIMIT, 10))
+  : ALL_SCENARIOS;
 
 // ===========================================================================
 // Per-ORM / Per-Database expected artifacts
@@ -279,7 +300,7 @@ const TS_TEMPLATE_DEVS = ["typescript", "@types/node", "tsx", "ts-node", "ts-nod
 
 function expectedScriptsFor(scenario) {
   const { language, orm, database, useEslint, useVitest } = scenario;
-  const scripts = new Set([...TEMPLATE_SCRIPTS[language], ...ORM_SCRIPTS[orm]]);
+  const scripts = new Set([...TEMPLATE_SCRIPTS[language], ...(ORM_SCRIPTS[orm] ?? [])]);
   if (orm === "drizzle") {
     for (const s of DRIZZLE_DB_SCRIPTS[database]) scripts.add(s);
   }
@@ -294,14 +315,18 @@ function expectedScriptsFor(scenario) {
 
 function expectedDepsFor(scenario) {
   const { orm, database, useRedis } = scenario;
-  const deps = new Set(["subatom", ...ORM_DB_DEPS[`${orm}:${database}`].dependencies]);
+  const deps = new Set(["subatom"]);
+  const ormDependencies = ORM_DB_DEPS[`${orm}:${database}`];
+  if (ormDependencies) for (const dependency of ormDependencies.dependencies) deps.add(dependency);
   if (useRedis) deps.add("ioredis");
   return [...deps].sort();
 }
 
 function expectedDevDepsFor(scenario) {
   const { language, orm, database, useEslint } = scenario;
-  const devDeps = new Set([...ORM_DB_DEPS[`${orm}:${database}`].devDependencies]);
+  const devDeps = new Set();
+  const ormDependencies = ORM_DB_DEPS[`${orm}:${database}`];
+  if (ormDependencies) for (const dependency of ormDependencies.devDependencies) devDeps.add(dependency);
   if (language === "ts") {
     for (const d of TS_TEMPLATE_DEVS) devDeps.add(d);
   }
@@ -377,7 +402,16 @@ function runExpectDriver(targetDir, scenario) {
       scenario.orm,
       scenario.database,
     ],
-    { stdio: "inherit", shell: false },
+    {
+      stdio: "inherit",
+      shell: false,
+      env: {
+        ...process.env,
+        TERM: "xterm-256color",
+        CI: "1",
+        FORCE_COLOR: "1",
+      },
+    },
   );
   if (result.status !== 0) {
     throw new Error(`Expect driver failed with exit code ${result.status}`);
@@ -450,6 +484,58 @@ function verifyPackageJson(projectDir, scenario) {
   log("VERIFY", `[${label}] package.json contents verified.`);
 }
 
+function verifyGeneratedBuild(projectDir, scenario) {
+  const label = scenarioLabel(scenario);
+  if (process.env.SUBATOM_E2E_SKIP_BUILD === "1") {
+    log("BUILD", `[${label}] Generated build skipped by SUBATOM_E2E_SKIP_BUILD=1.`);
+    return;
+  }
+
+  log("BUILD", `[${label}] Validating generated project sources...`);
+  const validationEnv = {
+    ...process.env,
+    CI: "1",
+    NO_COLOR: "1",
+    TERM: "dumb",
+    DATABASE_URL: scenario.database === "sqlite"
+      ? "file:./e2e.db"
+      : "postgresql://e2e:e2e@127.0.0.1:5432/e2e",
+  };
+  if (scenario.orm === "prisma") {
+    const prismaResult = spawnSync("npx", ["prisma", "generate"], {
+      cwd: projectDir,
+      encoding: "utf8",
+      env: validationEnv,
+      shell: false,
+      stdio: "inherit",
+    });
+    assert(
+      prismaResult.status === 0,
+      `[${label}] Prisma client generation failed with exit code ${prismaResult.status}.`,
+    );
+  }
+  const result = scenario.language === "ts"
+    ? spawnSync("npx", ["tsc", "--noEmit"], {
+        cwd: projectDir,
+        encoding: "utf8",
+        env: validationEnv,
+        shell: false,
+        stdio: "inherit",
+      })
+    : spawnSync("node", ["--check", path.join(projectDir, "main.js")], {
+        cwd: projectDir,
+        encoding: "utf8",
+        env: validationEnv,
+        shell: false,
+        stdio: "inherit",
+      });
+  assert(
+    result.status === 0,
+    `[${label}] Generated project source validation failed with exit code ${result.status}.`,
+  );
+  log("BUILD", `[${label}] Generated project source validation passed.`);
+}
+
 function verifyFeatureToggles(projectDir, scenario) {
   const label = scenarioLabel(scenario);
   log("VERIFY", `[${label}] Verifying feature toggles (only enabled features present)...`);
@@ -468,7 +554,7 @@ function verifyFeatureToggles(projectDir, scenario) {
   if (!scenario.useVitest) {
     const pkg = JSON.parse(readFileSync(path.join(projectDir, "package.json"), "utf8"));
     assert(
-      pkg.scripts?.["test"] === undefined,
+      pkg.scripts?.test === undefined,
       `[${label}] "test" script should NOT exist when Vitest is disabled`,
     );
   }
@@ -497,15 +583,17 @@ function verifyGitRepo(projectDir, scenario) {
 function verifyNoSnippetFiles(projectDir, scenario) {
   const label = scenarioLabel(scenario);
   log("VERIFY", `[${label}] Verifying no package.snippet files remain...`);
-  const result = spawnSync(
-    "find",
-    [projectDir, "-name", "package.snippet*.json", "-not", "-path", "*/node_modules/*"],
-    { encoding: "utf8" },
-  );
-  assert(
-    result.stdout.trim() === "",
-    `[${label}] Found leftover snippet files: ${result.stdout.trim()}`,
-  );
+  const leftovers = [];
+  const visit = (directory) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      if (entry.name === "node_modules" || entry.name === ".git") continue;
+      const fullPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(fullPath);
+      else if (/^package\.snippet.*\.json$/.test(entry.name)) leftovers.push(fullPath);
+    }
+  };
+  visit(projectDir);
+  assert(leftovers.length === 0, `[${label}] Found leftover snippet files: ${leftovers.join(", ")}`);
   log("VERIFY", `[${label}] No leftover snippet files.`);
 }
 
@@ -515,20 +603,35 @@ function verifyNoSnippetFiles(projectDir, scenario) {
 
 // Each scenario gets its own uniquely-named project directory.
 let scenarioIndex = 0;
+const activeTempRoots = new Set();
+
+function cleanupTempRoots() {
+  for (const root of activeTempRoots) rmSync(root, { recursive: true, force: true });
+  activeTempRoots.clear();
+}
+
+process.once("SIGINT", () => {
+  cleanupTempRoots();
+  process.exit(130);
+});
+process.once("SIGTERM", () => {
+  cleanupTempRoots();
+  process.exit(143);
+});
+process.once("exit", cleanupTempRoots);
 
 function main() {
-  log("START", `Starting comprehensive create-subatom E2E test (${ALL_SCENARIOS.length} scenarios)...`);
+  log("START", `Starting comprehensive create-subatom E2E test (${ACTIVE_SCENARIOS.length} scenarios)...`);
 
   // 1. Build the CLI if needed
   buildCli();
 
-  // 2. Create a single temp root for all scenarios
-  const tempRoot = mkdtempSync(path.join(tmpdir(), "subatom-e2e-"));
-  log("SETUP", `Temp working dir: ${tempRoot}`);
-
-  try {
-    // 3. Run every scenario
-    for (const scenario of ALL_SCENARIOS) {
+  // 2. Run every scenario in an isolated temporary directory.
+  for (const scenario of ACTIVE_SCENARIOS) {
+    const tempRoot = mkdtempSync(path.join(tmpdir(), "subatom-e2e-"));
+    activeTempRoots.add(tempRoot);
+    log("SETUP", `Temp working dir: ${tempRoot}`);
+    try {
       scenarioIndex += 1;
       const label = scenarioLabel(scenario);
       const projectName = `e2e-${scenarioIndex}`;
@@ -539,13 +642,24 @@ function main() {
       log("SCENARIO", `======================================================`);
 
       const enrichedScenario = { ...scenario, projectName };
+      if (enrichedScenario.preserveExistingFile) {
+        mkdirSync(projectDir, { recursive: true });
+        writeFileSync(path.join(projectDir, "keep.txt"), "preserve me\n", "utf8");
+      }
       try {
         runExpectDriver(tempRoot, enrichedScenario);
         verifyProjectStructure(path.join(tempRoot, projectName), enrichedScenario);
         verifyPackageJson(path.join(tempRoot, projectName), enrichedScenario);
+        verifyGeneratedBuild(path.join(tempRoot, projectName), enrichedScenario);
         verifyFeatureToggles(path.join(tempRoot, projectName), enrichedScenario);
         verifyGitRepo(path.join(tempRoot, projectName), enrichedScenario);
         verifyNoSnippetFiles(path.join(tempRoot, projectName), enrichedScenario);
+        if (enrichedScenario.preserveExistingFile) {
+          assert(
+            readFileSync(path.join(projectDir, "keep.txt"), "utf8") === "preserve me\n",
+            `[${label}] Existing project content was not preserved.`,
+          );
+        }
         passCount += 1;
         console.log(`\n✅ Scenario PASSED: ${label}`);
       } catch (err) {
@@ -553,15 +667,15 @@ function main() {
         console.error(`\n❌ Scenario FAILED: ${label}`);
         console.error(err.message);
       }
+    } finally {
+      log("CLEANUP", `Removing temp dir: ${tempRoot}`);
+      rmSync(tempRoot, { recursive: true, force: true });
+      activeTempRoots.delete(tempRoot);
     }
-  } finally {
-    // 5. Clean up
-    log("CLEANUP", `Removing temp dir: ${tempRoot}`);
-    rmSync(tempRoot, { recursive: true, force: true });
   }
 
   // 6. Summary
-  log("SUMMARY", `Passed: ${passCount} | Failed: ${failCount} | Total: ${ALL_SCENARIOS.length}`);
+  log("SUMMARY", `Passed: ${passCount} | Failed: ${failCount} | Total: ${ACTIVE_SCENARIOS.length}`);
   if (failCount > 0) {
     console.error(`\n❌ create-subatom E2E test FAILED (${failCount} scenario(s) failed)`);
     process.exit(1);

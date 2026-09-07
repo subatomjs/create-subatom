@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: explanation */
 import { describe, it, expect } from 'vitest';
 import { subatomSchemaContent } from '../../src/utils/drizzle/constants/subatom-schema-content.ts';
 import drizzleConfigFileContent from '../../src/utils/drizzle/constants/drizzle-config-content.ts';

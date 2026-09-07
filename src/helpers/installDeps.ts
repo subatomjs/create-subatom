@@ -3,6 +3,8 @@ import { execa } from "execa";
 import detectPackageManager from "./packages/detectPackageManager.js";
 
 export async function installDeps(targetDir: string): Promise<void> {
+  if (process.env.SUBATOM_E2E_SKIP_INSTALL === "1") return;
+
   const pm = detectPackageManager();
 
   try {

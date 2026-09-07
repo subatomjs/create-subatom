@@ -1,6 +1,6 @@
 import fs from "fs-extra";
 import path from "node:path";
-import { ProjectConfig } from "../../types.js";
+import type { ProjectConfig } from "../../types.js";
 import {
   dotEnvFileContent,
   mainFileContent,
@@ -53,7 +53,7 @@ async function handleCopyTemplate(
     // Root .env.requirements (written even if no DB/ORM is selected)
     fs.outputFile(
       path.join(targetDir, ".env.requirements"),
-      baseEnvLines.join("\n") + "\n",
+      `${baseEnvLines.join("\n")}\n`,
       "utf-8",
     ),
     // subatom.config.(ts|js)
@@ -131,8 +131,10 @@ async function handleCopyTemplate(
     );
   }
 
-  // Ensure all template files are copied before running config handlers
-  await Promise.all(copyJobs);
+  // Copy in order so overlapping template paths cannot race on the destination.
+  for (const copyJob of copyJobs) {
+    await copyJob;
+  }
 
   //! 6. Execute ORM-specific configuration handlers
   switch (config.orm) {

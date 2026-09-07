@@ -1,10 +1,11 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: explanation */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.resetModules();
 
 let readBehavior: (path: string, enc: string) => Promise<string> = async () => '';
-let writeBehavior: (path: string, data: string, enc: string) => Promise<void> = async () => {};
-vi.mock('fs-extra', () => ({ default: { readFile: (p: string, e: string) => readBehavior(p, e), writeFile: (p: string, d: string, e: string) => writeBehavior(p, d, e) } }));
+vi.mock('fs-extra', () => ({ default: { readFile: (p: string, e: string) => readBehavior(p, e) } }));
+vi.mock('../../src/helpers/atomicWriteFile.ts', () => ({ atomicWriteFile: vi.fn() }));
 
 describe('handlePackageSnippetUpdate', () => {
   beforeEach(() => {
@@ -15,14 +16,12 @@ describe('handlePackageSnippetUpdate', () => {
     const sample = JSON.stringify({ name: 'x' });
     readBehavior = async () => sample;
 
-    const writeSpy = vi.fn(async (_p: string, _d: string) => {});
-    writeBehavior = (p, d) => writeSpy(p, d);
-
     const fn = (await import('../../src/helpers/copy-template/handlePackageSnippetUpdate.ts')).default;
     await fn('/tmp/package.snippet.json', 'ts' as any);
 
-    expect(writeSpy).toHaveBeenCalled();
-    const written = writeSpy.mock.calls[0][1];
+    const { atomicWriteFile } = await import('../../src/helpers/atomicWriteFile.ts');
+    expect(atomicWriteFile).toHaveBeenCalled();
+    const written = (atomicWriteFile as any).mock.calls[0][1];
     expect(written).toContain('build-schema');
   });
 
@@ -34,6 +33,16 @@ describe('handlePackageSnippetUpdate', () => {
     await expect(fn('/tmp/package.snippet.json', 'js' as any)).rejects.toThrow('nope');
 
     errorSpy.mockRestore();
+  });
+
+  it('writes the JavaScript build command when scripts already exist', async () => {
+    readBehavior = async () => JSON.stringify({ scripts: { test: 'node test.js' } });
+    const fn = (await import('../../src/helpers/copy-template/handlePackageSnippetUpdate.ts')).default;
+
+    await fn('/tmp/package.snippet.json', 'js' as any);
+
+    const { atomicWriteFile } = await import('../../src/helpers/atomicWriteFile.ts');
+    expect((atomicWriteFile as any).mock.calls[0][1]).toContain('node scripts/schema_builder.js');
   });
 });
 

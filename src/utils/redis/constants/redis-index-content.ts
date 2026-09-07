@@ -1,5 +1,5 @@
 // redis-index-content.ts
-import { Language } from "../../../types.js";
+import type { Language } from "../../../types.js";
 
 function indexFileContent(language: Language): string {
   return `export { RedisClient } from './redis-client.js';
