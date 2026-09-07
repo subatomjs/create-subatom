@@ -1,0 +1,24 @@
+{
+  "name": "hello",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "subatom dev",
+    "build": "subatom build",
+    "start": "subatom start",
+    "preview": "subatom preview"
+  },
+  "dependencies": {
+    "subatom": "^2.0.1",
+    "subatom-infer": "^1.3.9",
+    "subatom-pulse": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4"
+  }
+}

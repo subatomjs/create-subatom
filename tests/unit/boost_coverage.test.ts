@@ -47,8 +47,8 @@ describe('Boost coverage by calling content generators', () => {
     expect(s1).toContain('defineConfig');
     expect(s2).toContain('sourcemap');
 
-    const m1 = mainFileContent('postgresql', 'prisma', 'ts', 'app', false);
-    const m2 = mainFileContent('mongodb', 'mongoose', 'js', 'app', true);
+    const m1 = mainFileContent('postgresql', 'prisma', 'ts', false, false);
+    const m2 = mainFileContent('mongodb', 'mongoose', 'js', true, true);
     expect(m1).toContain('prisma');
     expect(m2).toContain('connectDB');
 

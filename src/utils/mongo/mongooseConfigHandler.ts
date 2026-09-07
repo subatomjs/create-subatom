@@ -10,10 +10,10 @@ import envRequirementFileContent from "../drizzle/constants/env-requirements-con
 async function mongooseConfigHandler(
   targetDir: string,
   language: ProjectConfig["language"],
-  projectName: ProjectConfig["projectName"],
   database: ProjectConfig["database"],
   orm: ProjectConfig["orm"],
   useRedis: ProjectConfig["useRedis"],
+  useSocket: ProjectConfig["useSocket"],
 ): Promise<void> {
   // ! 1. config folder
   const config_directory_address = path.join(targetDir, "src", "config");
@@ -41,10 +41,10 @@ async function mongooseConfigHandler(
     language === "js" ? "mongoConnect.js" : "mongoConnect.ts",
   );
 
-  //! 6. __env file path...
+  //! 6. envConfig file path...
   const env_config_file_path = path.join(
     config_directory_address,
-    language === "js" ? "__env.js" : "__env.ts",
+    language === "js" ? "envConfig.js" : "envConfig.ts",
   );
 
   // All five writes are independent — run concurrently.
@@ -52,7 +52,7 @@ async function mongooseConfigHandler(
     //todo: (1) main.ts || main.js
     fs.outputFile(
       main_file_path,
-      mainFileContent(database, orm, language, projectName, useRedis),
+      mainFileContent(database, orm, language, useRedis, useSocket),
       "utf-8",
     ),
 
@@ -77,7 +77,7 @@ async function mongooseConfigHandler(
       "utf-8",
     ),
 
-    //todo: (5) __env.ts || __env.js
+    //todo: (5) envConfig.ts || envConfig.js
     fs.outputFile(
       env_config_file_path,
       mongoEnvConfigFileContent(language, useRedis),

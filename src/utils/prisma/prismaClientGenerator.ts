@@ -14,6 +14,8 @@ export function prismaClientGenerator(
       return mysqlClientFileContent(language);
     case "sqlite":
       return sqliteClientFileContent(language);
+      case "none":
+        return "";
     default: {
       const exhaustiveCheck: never = database;
       throw new Error(

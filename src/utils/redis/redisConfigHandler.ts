@@ -10,12 +10,19 @@ import redisErrorsFileContent from "./constants/redis-error-content.js";
 import indexFileContent from "./constants/redis-index-content.js";
 import redisBootstrapFileContent from "./constants/redis-bootstrap-content.js";
 import redisTypesFileContent from "./constants/redis-types-content.js";
+import redisEnvConfigFileContent from "./constants/redis-env-config.js";
 
 async function redisConfigHandler(
   targetDir: string,
   language: ProjectConfig["language"],
 ) {
   const redis_directory = path.join(targetDir, "src", "redis");
+  const config_directory_address = path.join(targetDir, "src", "config");
+
+  const env_config_file_path = path.join(
+    config_directory_address,
+    language === "js" ? "envConfig.js" : "envConfig.ts",
+  );
 
   const jobs: Promise<void>[] = [
     //! 1. redis-client.ts
@@ -48,12 +55,17 @@ async function redisConfigHandler(
       redisBootstrapFileContent(language),
       "utf-8",
     ),
+    fs.outputFile(
+      path.join(env_config_file_path, `envConfig.${language}`),
+      redisEnvConfigFileContent(language),
+      "utf-8",
+    ),
   ];
 
   // TODO: (If language is typescript create [redis.types.ts] file)
   if (language === "ts") {
     jobs.push(
-      //! 6. redis.types.ts  
+      //! 6. redis.types.ts
       fs.outputFile(
         path.join(redis_directory, `redis.types.${language}`),
         redisTypesFileContent,

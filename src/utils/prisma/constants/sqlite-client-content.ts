@@ -7,16 +7,16 @@ const require = createRequire(import.meta.url);
 const { PrismaClient } = require("@prisma/client");
 
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import __env from "./src/config/__env.js";
+import envConfig from "./src/config/envConfig.js";
 
-if (!__env.DATABASE_URL) {
+if (!envConfig.DATABASE_URL) {
   throw new Error(
     "DATABASE_URL is not set. Add it to your .env file, e.g.\\n" +
       'DATABASE_URL="file:./dev.db"',
   );
 }
 
-const adapter = new PrismaBetterSqlite3({ url: __env.DATABASE_URL });
+const adapter = new PrismaBetterSqlite3({ url: envConfig.DATABASE_URL });
 
 export const prisma = new PrismaClient({
   adapter,
@@ -27,16 +27,16 @@ export default prisma;`;
   } else {
     return `import { PrismaClient } from "./generated/prisma/client.js";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import __env from "./src/config/__env.js";
+import envConfig from "./src/config/envConfig.js";
 
-if (!__env.DATABASE_URL) {
+if (!envConfig.DATABASE_URL) {
   throw new Error(
     'DATABASE_URL is not set. Add it to your .env file, e.g.\\n' +
       'DATABASE_URL="file:./dev.db"',
   );
 }
 
-const adapter = new PrismaBetterSqlite3({ url: __env.DATABASE_URL });
+const adapter = new PrismaBetterSqlite3({ url: envConfig.DATABASE_URL });
 
 export const prisma = new PrismaClient({
   adapter,

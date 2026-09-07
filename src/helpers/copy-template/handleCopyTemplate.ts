@@ -1,7 +1,14 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { ProjectConfig } from "../../types.js";
-import { dotEnvFileContent, subatomConfigContent, TEMPLATES_DIR } from "../../utils/common_content.js";
+import {
+  dotEnvFileContent,
+  mainFileContent,
+  serverFileContent,
+  subatomConfigContent,
+  TEMPLATES_DIR,
+  userRouterFileContent,
+} from "../../utils/common_content.js";
 import handleCopyIfExists from "./handleCopyIfExists.js";
 import prismaConfigHandler from "../../utils/prisma/prismaConfigHandler.js";
 import { slugify } from "../sharedHelper.js";
@@ -10,6 +17,7 @@ import mongooseConfigHandler from "../../utils/mongo/mongooseConfigHandler.js";
 import drizzleConfigHandler from "../../utils/drizzle/drizzleConfigHandler.js";
 import redisConfigHandler from "../../utils/redis/redisConfigHandler.js";
 import { setupEslint } from "../eslint/setupEslint.js";
+import socketConfigHandler from "../../utils/websocket/socketConfigHandler.js";
 
 async function handleCopyTemplate(
   config: ProjectConfig,
@@ -17,84 +25,144 @@ async function handleCopyTemplate(
 ): Promise<void> {
   await fs.ensureDir(targetDir);
 
-  //!  1. create script directory path..
+  //! 1. Create scripts directory path
   const script_directory = path.join(targetDir, "scripts");
-  
-  //! 2. setup.env.ts || setup.env.js file...
-  const copy_env_requirements_config_file = config.language === "js" ? "setup.env.js" : "setup.env.ts";
 
+  //! 2. Setup .env requirements, root .env.requirements, and subatom.config
+  const copy_env_requirements_config_file =
+    config.language === "js" ? "setup.env.js" : "setup.env.ts";
+
+  // Base environment variables guaranteed for all configurations
+  const baseEnvLines: string[] = [
+    "PORT=8080",
+    "HOST=localhost",
+    "NODE_ENV=development",
+  ];
+
+  if (config.useRedis) {
+    baseEnvLines.push("REDIS_URL=redis://localhost:6379");
+  }
 
   await Promise.all([
-    //todo: 1. create .env file from .env.requirements script...
-    fs.outputFile(path.join(script_directory, copy_env_requirements_config_file), dotEnvFileContent(), "utf-8"),
-
-    //todo: 2. create subatom.config.ts || subatom.config.js file...
-    fs.outputFile(path.join(targetDir, config.language === "js" ? "subatom.config.js" : "subatom.config.ts"), subatomConfigContent(config.language),"utf-8"),
+    // scripts/setup.env.(ts|js)
+    fs.outputFile(
+      path.join(script_directory, copy_env_requirements_config_file),
+      dotEnvFileContent(),
+      "utf-8",
+    ),
+    // Root .env.requirements (written even if no DB/ORM is selected)
+    fs.outputFile(
+      path.join(targetDir, ".env.requirements"),
+      baseEnvLines.join("\n") + "\n",
+      "utf-8",
+    ),
+    // subatom.config.(ts|js)
+    fs.outputFile(
+      path.join(
+        targetDir,
+        config.language === "js" ? "subatom.config.js" : "subatom.config.ts",
+      ),
+      subatomConfigContent(config.language),
+      "utf-8",
+    ),
   ]);
 
-  //! 3. template selection according language ...
-  const required_template = config.language === "ts" ? "template_ts" : "template_js";
-
-  //! 4. base file path...
-  const required_orm_directory = `orm/${config.orm}/base`;
-
+  //! 3. Base language template
+  const required_template =
+    config.language === "ts" ? "template_ts" : "template_js";
 
   const copyJobs: Promise<void>[] = [
-    //todo: 1. Template directory copy...
     handleCopyIfExists(
       path.join(TEMPLATES_DIR, required_template),
       targetDir,
       required_template,
     ),
-
-    //todo: 2. ORM directory copy ...
-    handleCopyIfExists(
-      path.join(TEMPLATES_DIR, "orm", config.orm, "base"),
-      targetDir,
-      required_orm_directory,
-    ),
   ];
 
+  //! 4. Handle ORM templates
+  const hasOrm = config.orm !== "none";
 
-  //todo: If orm is not mongoose: push this to copy jobs...
-  if (config.orm !== "mongoose") {
+  if (hasOrm) {
+    const required_orm_directory = `orm/${config.orm}/base`;
+
     copyJobs.push(
       handleCopyIfExists(
-        path.join(TEMPLATES_DIR, "orm", config.orm, config.database),
+        path.join(TEMPLATES_DIR, "orm", config.orm, "base"),
         targetDir,
-        `orm/${config.orm}/${config.database}`,
+        required_orm_directory,
+      ),
+    );
+
+    if (config.orm !== "mongoose" && config.database !== "none") {
+      copyJobs.push(
+        handleCopyIfExists(
+          path.join(TEMPLATES_DIR, "orm", config.orm, config.database),
+          targetDir,
+          `orm/${config.orm}/${config.database}`,
+        ),
+      );
+    }
+  }
+
+  //! 5. Optional feature templates
+  if (config.useRedis) {
+    copyJobs.push(
+      handleCopyIfExists(path.join(TEMPLATES_DIR, "redis"), targetDir, "redis"),
+    );
+  }
+
+  if (config.useSocket) {
+    copyJobs.push(
+      handleCopyIfExists(
+        path.join(TEMPLATES_DIR, "socket"),
+        targetDir,
+        "socket",
       ),
     );
   }
 
+  if (config.useVitest) {
+    copyJobs.push(
+      handleCopyIfExists(
+        path.join(TEMPLATES_DIR, "vitest"),
+        targetDir,
+        "vitest",
+      ),
+    );
+  }
+
+  // Ensure all template files are copied before running config handlers
   await Promise.all(copyJobs);
 
-
-
-switch (config.orm) {
-    case "prisma":
+  //! 6. Execute ORM-specific configuration handlers
+  switch (config.orm) {
+    case "prisma": {
       await prismaConfigHandler(
         targetDir,
         config.database,
         config.language,
-        config.projectName,
         config.useRedis,
         config.orm,
+        config.useSocket,
       );
 
-      // Update package snippet name...
-      const prisma_snippet_file = path.join(targetDir, `package.snippet.${slugify(required_orm_directory)}.json`);
+      const required_orm_directory = `orm/${config.orm}/base`;
+      const prisma_snippet_file = path.join(
+        targetDir,
+        `package.snippet.${slugify(required_orm_directory)}.json`,
+      );
       await handlePackageSnippetUpdate(prisma_snippet_file, config.language);
       break;
+    }
 
     case "mongoose":
       await mongooseConfigHandler(
         targetDir,
         config.language,
-        config.projectName,
         config.database,
         config.orm,
         config.useRedis,
+        config.useSocket,
       );
       break;
 
@@ -102,44 +170,65 @@ switch (config.orm) {
       await drizzleConfigHandler(
         targetDir,
         config.language,
-        config.projectName,
         config.database,
         config.orm,
         config.useRedis,
+        config.useSocket,
       );
       break;
 
-    default:
-      throw new Error(`Unsupported ORM: ${config.orm}`);
+    case "none":
+      break;
+
+    default: {
+      const _exhaustiveCheck: never = config.orm;
+      throw new Error(`Unsupported ORM: ${_exhaustiveCheck}`);
+    }
   }
 
+  //! 7. Generate main entry file (Guarantees main.ts/js is always written)
+  const mainFileName = config.language === "ts" ? "main.ts" : "main.js";
+  await fs.outputFile(
+    path.join(targetDir, mainFileName),
+    mainFileContent(
+      config.database,
+      config.orm,
+      config.language,
+      config.useRedis,
+      config.useSocket,
+    ),
+    "utf-8",
+  );
 
-  //! Redis configuration....
-  if (config.useRedis === true) {
+  //! 8. create dynamic server file.
+  const serverFileName = config.language === "ts" ? "server.ts" : "server.js";
+  await fs.outputFile(
+    path.join(targetDir, "src", serverFileName),
+    serverFileContent(config.useSocket, config.language),
+    "utf-8",
+  );
+
+//! 9. create user router file.
+    const userRouterFileName = config.language === "ts" ? "user.route.ts" : "user.route.js";
+  await fs.outputFile(
+    path.join(targetDir, "src", "routes", userRouterFileName),
+    userRouterFileContent(config.language),
+    "utf-8",
+  );
+
+
+  //! 10. Post-copy feature handlers
+  if (config.useRedis) {
     await redisConfigHandler(targetDir, config.language);
   }
 
-  //! Eslint configuration....
-  if (config.useEslint === true) {
-    await setupEslint(config, targetDir);
+  if (config.useSocket) {
+    await socketConfigHandler(targetDir, config.language);
   }
 
-  // Optional extras are independent of each other — copy concurrently.
-  const optionalJobs: Promise<void>[] = [];
-  
-  if (config.useRedis) {
-    optionalJobs.push(
-      handleCopyIfExists(path.join(TEMPLATES_DIR, "redis"), targetDir, "redis"),
-    );
-  }
-  if (config.useVitest) {
-    optionalJobs.push(
-      handleCopyIfExists(path.join(TEMPLATES_DIR, "vitest"), targetDir, "vitest"),
-    );
-  }
-  if (optionalJobs.length) {
-    await Promise.all(optionalJobs);
+  if (config.useEslint) {
+    await setupEslint(config, targetDir);
   }
 }
 
-export default handleCopyTemplate
+export default handleCopyTemplate;

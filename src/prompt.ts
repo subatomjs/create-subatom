@@ -1,20 +1,13 @@
 import { text, select, confirm, isCancel, cancel } from "@clack/prompts";
-import type { ProjectConfig, Database } from "./types.js";
+import type { ProjectConfig, Database, Orm, Language } from "./types.js";
 
-/**
- * Runs the full interactive prompt flow and returns a typed config object.
- *
- * cliProjectName: if the user already typed a name as a CLI arg
- * (e.g. `npm create subatom@latest my-app`), pass it in here so we
- * skip asking for it again.
- */
 export async function runPrompts(
   cliProjectName?: string,
 ): Promise<ProjectConfig> {
   const projectName = cliProjectName ?? (await promptProjectName());
 
-  //! 1. Option: What language would you like to use? (TypeScript or JavaScript)
-  const language = await select({
+  // 1. Language
+  const language = await select<Language>({
     message: "Select a language:",
     options: [
       { value: "ts", label: "TypeScript" },
@@ -23,45 +16,27 @@ export async function runPrompts(
   });
   exitOnCancel(language);
 
-  //! 2. Option: Would you like to configure Redis?
-  const useRedis = await confirm({
-    message: "Would you like to configure Redis?",
-    initialValue: false,
-  });
-  exitOnCancel(useRedis);
-
-  //! 3. Option: Would you like to setup ESLint?
-  const useEslint = await confirm({
-    message: "Would you like to setup ESLint?",
-    initialValue: true,
-  });
-  exitOnCancel(useEslint);
-
-  //! 4. Option: Would you like to setup Vitest?
-  const useVitest = await confirm({
-    message: "Would you like to add Vitest?",
-    initialValue: false,
-  });
-  exitOnCancel(useVitest);
-
-  //! 5. Option: What ORM would you like to use? (Prisma, Drizzle, Mongoose)
-  const orm = await select({
+  // 2. ORM
+  const orm = await select<Orm>({
     message: "Select an ORM:",
     options: [
       { value: "prisma", label: "Prisma" },
       { value: "drizzle", label: "Drizzle" },
       { value: "mongoose", label: "Mongoose" },
+      { value: "none", label: "None" },
     ],
   });
   exitOnCancel(orm);
 
-  //! 6. Option: What database would you like to use? (PostgreSQL, MySQL, SQLite, MongoDB)
-  let database: Database;
+  // 3. Database (Derived or Conditional)
+  let database: Database = "none";
 
   if (orm === "mongoose") {
+    // Mongoose strictly requires MongoDB
     database = "mongodb";
-  } else {
-    const selectedDatabase = await select({
+  } else if (orm === "prisma" || orm === "drizzle") {
+    // SQL ORMs require a relational database
+    const selectedDatabase = await select<Exclude<Database, "none" | "mongodb">>({
       message: "Select a database:",
       options: [
         { value: "postgresql", label: "PostgreSQL" },
@@ -70,22 +45,64 @@ export async function runPrompts(
       ],
     });
     exitOnCancel(selectedDatabase);
-    database = selectedDatabase as Database;
+    database = selectedDatabase;
+  } else {
+    // orm === "none": Ask if they want a raw driver or no database at all
+    const selectedDatabase = await select<Database>({
+      message: "Select a database (or skip):",
+      options: [
+        { value: "postgresql", label: "PostgreSQL" },
+        { value: "mysql", label: "MySQL" },
+        { value: "sqlite", label: "SQLite" },
+        { value: "mongodb", label: "MongoDB" },
+        { value: "none", label: "None (Skip database setup)" },
+      ],
+    });
+    exitOnCancel(selectedDatabase);
+    database = selectedDatabase;
   }
+
+  // 4. Redis
+  const useRedis = await confirm({
+    message: "Would you like to configure Redis?",
+    initialValue: false,
+  });
+  exitOnCancel(useRedis);
+
+  // 5. ESLint
+  const useEslint = await confirm({
+    message: "Would you like to setup ESLint?",
+    initialValue: true,
+  });
+  exitOnCancel(useEslint);
+
+  // 6. Vitest
+  const useVitest = await confirm({
+    message: "Would you like to add Vitest?",
+    initialValue: false,
+  });
+  exitOnCancel(useVitest);
+
+  // 7. WebSocket (Added missing exit check)
+  const useSocket = await confirm({
+    message: "Does your project need a WebSocket connection?",
+    initialValue: false,
+  });
+  exitOnCancel(useSocket);
 
   return {
     projectName,
-    language: language as ProjectConfig["language"],
+    language,
     database,
-    orm: orm as ProjectConfig["orm"],
-    useRedis: useRedis as boolean,
-    useEslint: useEslint as boolean,
-    useVitest: useVitest as boolean,
+    orm,
+    useRedis,
+    useEslint,
+    useVitest,
+    useSocket,
   };
 }
 
 async function promptProjectName(): Promise<string> {
-  //! 1. Enter project name (e.g. my-app, my_project, my.project)
   const name = await text({
     message: "Project name:",
     placeholder: "my-app",
@@ -99,14 +116,9 @@ async function promptProjectName(): Promise<string> {
     },
   });
   exitOnCancel(name);
-  return name as string;
+  return name;
 }
 
-/**
- * @clack/prompts returns a special "cancel" symbol when the user presses
- * Ctrl+C mid-prompt. This checks for that and exits cleanly instead of
- * letting `undefined`/symbols silently flow into the rest of the CLI.
- */
 function exitOnCancel<T>(value: T | symbol): asserts value is T {
   if (isCancel(value)) {
     cancel("Operation cancelled.");

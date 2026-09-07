@@ -19,8 +19,8 @@ const environment = {
     ${useRedis === true ? "REDIS_SHUTDOWN_TIMEOUT_MS: process.env.REDIS_SHUTDOWN_TIMEOUT_MS as string || '',": ""}
     ${useRedis === true ? "REDIS_DEBUG: process.env.REDIS_DEBUG as string || ''": ""}
 }
-const __env = Object.freeze(environment);
-export default __env;
+const envConfig = Object.freeze(environment);
+export default envConfig;
 `;
   } else {
     return `import {configEnv} from 'subatom'
@@ -40,8 +40,8 @@ const environment = {
     ${useRedis === true ? "REDIS_DEBUG: process.env.REDIS_DEBUG || ''": ""}
 
 }
-const __env = Object.freeze(environment);
-export default __env;
+const envConfig = Object.freeze(environment);
+export default envConfig;
     `;
   }
 };

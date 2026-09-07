@@ -15,12 +15,12 @@ export class DatabasePoolForDrizzle {
         return `import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema.js";
-import __env from "../config/__env.js";
+import envConfig from "../config/envConfig.js";
 
 const { Pool } = pg;
 
 const pool = new Pool({
-  connectionString: __env.DATABASE_URL,
+  connectionString: envConfig.DATABASE_URL,
 });
 
 export const db = drizzle(pool, { schema });
@@ -29,10 +29,10 @@ export const db = drizzle(pool, { schema });
         return `import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
 import * as schema from './schema.js';
-import __env from '../config/__env.js';
+import envConfig from '../config/envConfig.js';
 import { parseDatabaseUrl } from '../db/dbUrl.js';
 
-const parsed = parseDatabaseUrl(__env.DATABASE_URL);
+const parsed = parseDatabaseUrl(envConfig.DATABASE_URL);
 
 export const poolConnection = mysql.createPool({
   host: parsed.host,
@@ -78,14 +78,14 @@ import { drizzle as drizzleBetterSqlite3, type BetterSQLite3Database } from 'dri
 import { sql } from 'drizzle-orm';
 
 import * as schema from './schema.js';
-import __env from '../config/__env.js';
+import envConfig from '../config/envConfig.js';
 
 export type AppDatabase = LibSQLDatabase<typeof schema> | BetterSQLite3Database<typeof schema>;
 
 let sqliteHandle: Database.Database | null = null;
 
 function createDatabaseInstance(): AppDatabase {
-  const dbConfig = __env.DB;
+  const dbConfig = envConfig.DB;
 
   if (dbConfig.kind === 'libsql') {
     const client = createClient({
@@ -137,12 +137,12 @@ import { drizzle as drizzleBetterSqlite3 } from 'drizzle-orm/better-sqlite3';
 import { sql } from 'drizzle-orm';
 
 import * as schema from './schema.js';
-import __env from '../config/__env.js';
+import envConfig from '../config/envConfig.js';
 
 let sqliteHandle = null;
 
 function createDatabaseInstance() {
-  const dbConfig = __env.DB;
+  const dbConfig = envConfig.DB;
 
   if (dbConfig.kind === 'libsql') {
     const client = createClient({

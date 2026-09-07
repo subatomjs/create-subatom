@@ -3,16 +3,16 @@ import { intro, outro, spinner, cancel } from "@clack/prompts";
 import pc from "picocolors";
 import path from "node:path";
 
-import { runPrompts } from "./prompt.js";
-import { installDeps } from "./helpers/installDeps.js";
-import { gitInit } from "./helpers/gitInit.js";
+import { runPrompts } from "../prompt.js";
+import { installDeps } from "../helpers/installDeps.js";
+import { gitInit } from "../helpers/gitInit.js";
 import {
   resolveProjectNameArg,
   InvalidProjectNameError,
-} from "./helpers/resolveProjectName.js";
-import { buildOutroMessage } from "./helpers/formatOutro.js";
-import handleCopyTemplate from "./helpers/copy-template/handleCopyTemplate.js";
-import mergePackageJson from "./helpers/packages/package-json/mergePackageJson.js";
+} from "../helpers/resolveProjectName.js";
+import { buildOutroMessage } from "../helpers/formatOutro.js";
+import handleCopyTemplate from "../helpers/copy-template/handleCopyTemplate.js";
+import mergePackageJson from "../helpers/packages/package-json/mergePackageJson.js";
 
 export async function main(resolver: (arg?: string) => { name: string | undefined; useCurrentDir: boolean } = resolveProjectNameArg) {
   intro(pc.bgCyan(pc.black(" create-subatom ")));

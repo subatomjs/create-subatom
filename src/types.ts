@@ -6,9 +6,9 @@
 
 export type Language = 'ts' | 'js';
 
-export type Orm = 'prisma' | 'drizzle' | 'mongoose';
+export type Orm = 'prisma' | 'drizzle' | 'mongoose' | 'none';
 
-export type Database = 'postgresql' | 'mysql' | 'sqlite' | 'mongodb';
+export type Database = 'postgresql' | 'mysql' | 'sqlite' | 'mongodb' | 'none';
 
 export type PackageManager = 'npm' | 'pnpm' | 'yarn' | 'bun';
 
@@ -27,6 +27,7 @@ export interface ProjectConfig {
   useRedis: boolean;
   useEslint: boolean;
   useVitest: boolean;
+  useSocket: boolean;
 }
 
 /**

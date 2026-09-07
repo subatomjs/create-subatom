@@ -13,7 +13,7 @@ describe('common_content', () => {
   });
 
   it('mainFileContent returns warning for mongoose wrong db', () => {
-    const s = mainFileContent('postgresql' as any, 'mongoose' as any, 'ts', 'app', false);
+    const s = mainFileContent('postgresql' as any, 'mongoose' as any, 'ts', false, false);
     expect(s).toContain('Mongoose only supports MongoDB');
   });
 

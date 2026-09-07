@@ -3,15 +3,15 @@ import { Language } from "../../../types.js";
 const mongoDbConnectionScript = (fileType: Language): string => {
   if (fileType === "ts") {
     return `import mongoose from 'mongoose';
-import __env from './__env.js';
+import envConfig from './envConfig.js';
 
 const connectDB = async (): Promise<void> => {
   try {
     // Assert the string exists or let Mongoose throw if undefined
-    const connectionString = __env.MONGO_CONNECTION_STRING as string;
+    const connectionString = envConfig.MONGO_CONNECTION_STRING as string;
 
     const conn = await mongoose.connect(connectionString, {
-      autoIndex: __env.NODE_ENV !== 'production', // Disable autoIndex in production
+      autoIndex: envConfig.NODE_ENV !== 'production', // Disable autoIndex in production
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
     });
@@ -36,13 +36,13 @@ mongoose.connection.on('error', (err: Error) => {
 export default connectDB;
   `;
   } else {
-    return `import __env from "./__env.js"
+    return `import envConfig from "./envConfig.js"
 import mongoose from 'mongoose';
 
 const connectDB = async () => {
   try {
     // Replace with your MongoDB connection string or use an environment variable
-    const conn = await mongoose.connect(__env.MONGO_CONNECTION_STRING, {
+    const conn = await mongoose.connect(envConfig.MONGO_CONNECTION_STRING, {
       // Optional configuration options:
       autoIndex: true, // Set to false in production to prevent performance hits
       serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds

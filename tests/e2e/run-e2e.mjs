@@ -109,7 +109,7 @@ function prismaFiles(language) {
     `prisma.${ext}`,
     `prisma.config.${ext}`,
     ".env.requirements",
-    `src/config/__env.${ext}`,
+    `src/config/envConfig.${ext}`,
     "src/models/subatom.prisma",
     "prisma/schema.prisma",
     `scripts/schema_builder.${ext}`,
@@ -126,7 +126,7 @@ function drizzleFiles(language, database) {
     `src/models/subatom.model.${ext}`,
     `src/db/schema.${ext}`,
     `src/db/db_pool.${ext}`,
-    `src/config/__env.${ext}`,
+    `src/config/envConfig.${ext}`,
   ];
   if (database === "mysql") {
     files.push(
@@ -149,7 +149,7 @@ function mongooseFiles(language) {
     ".env.requirements",
     `src/models/subatom.model.${ext}`,
     `src/config/mongoConnect.${ext}`,
-    `src/config/__env.${ext}`,
+    `src/config/envConfig.${ext}`,
   ];
 }
 

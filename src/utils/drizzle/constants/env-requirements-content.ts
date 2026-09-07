@@ -43,6 +43,8 @@ function envRequirementFileContent(
         : baseConfig;
       return config.join("\n") + "\n";
     }
+    case "none":
+      return ""
     default: {
       const _exhaustiveCheck: never = database;
       throw new Error(`Unsupported database type: ${_exhaustiveCheck}`);

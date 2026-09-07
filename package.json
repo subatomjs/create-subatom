@@ -3,9 +3,9 @@
   "version": "0.10.2",
   "description": "CLI tool of subatom framework.",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/create.js",
   "bin": {
-    "create-subatom": "./dist/index.js"
+    "create-subatom": "./dist/bin/create.js"
   },
   "files": [
     "dist",
@@ -26,15 +26,16 @@
     "url": "git+https://github.com/subatomjs/subatom.git"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">= 24"
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "build": "npm run clean && tsc -p tsconfig.json && tsx src/helpers/copyFolder.ts",
-    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run clean && npm run typecheck && tsdown && tsx src/helpers/copyFolder.ts && chmod +x dist/bin/create.js",
+    "dev": "tsx src/bin/create.ts",
     "prepublishOnly": "npm run build",
     "test:unit": "npx vitest run",
     "test:unit-coverage": "npx vitest run --coverage",
@@ -55,6 +56,7 @@
     "@clack/prompts": "^1.7.0",
     "execa": "^10.0.1",
     "fs-extra": "^11.4.0",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "tsdown": "^0.23.0"
   }
 }

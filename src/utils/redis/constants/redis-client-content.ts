@@ -17,14 +17,14 @@ import {
   RedisConnectionError,
   RedisLockError,
 } from "./redis.errors.js";
-import __env from "../config/__env.js";
+import envConfig from "../config/envConfig.js";
 
 const defaultLogger: Logger = {
   info: (msg, meta) => console.log('[Redis] ' + msg, meta ?? ''),
   warn: (msg, meta) => console.warn('[Redis] ' + msg, meta ?? ''),
   error: (msg, meta) => console.error('[Redis] ' + msg, meta ?? ''),
   debug: (msg, meta) => {
-    if (__env.REDIS_DEBUG === 'true')
+    if (envConfig.REDIS_DEBUG === 'true')
       console.debug('[Redis] ' + msg, meta ?? '');
   },
 };
@@ -666,7 +666,7 @@ export class RedisClient {
   }
 
   async flushCurrentDb(): Promise<void> {
-    if (__env.NODE_ENV === "production") {
+    if (envConfig.NODE_ENV === "production") {
       throw new Error("flushCurrentDb() is disabled in production for safety.");
     }
     await this.client.flushdb();
@@ -693,7 +693,7 @@ export class RedisClient {
   } else {
     return `import Redis from "ioredis";
 import crypto from "crypto";
-import __env from "../config/__env.js";
+import envConfig from "../config/envConfig.js";
 import {
   RedisNotInitializedError,
   RedisConnectionError,
@@ -705,7 +705,7 @@ const defaultLogger = {
   warn: (msg, meta) => console.warn('[Redis] ' + msg, meta ?? ''),
   error: (msg, meta) => console.error('[Redis] ' + msg, meta ?? ''),
   debug: (msg, meta) => {
-    if (__env.REDIS_DEBUG === 'true')
+    if (envConfig.REDIS_DEBUG === 'true')
       console.debug('[Redis] ' + msg, meta ?? '');
   },
 };
@@ -1295,7 +1295,7 @@ export class RedisClient {
   }
 
   async flushCurrentDb() {
-    if (__env.NODE_ENV === "production") {
+    if (envConfig.NODE_ENV === "production") {
       throw new Error("flushCurrentDb() is disabled in production for safety.");
     }
     await this.client.flushdb();

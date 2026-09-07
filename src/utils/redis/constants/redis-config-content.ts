@@ -1,9 +1,9 @@
-// redis-config-content.ts 
+// redis-config-content.ts
 import { Language } from "../../../types.js";
 
 function redisConfigFileContent(language: Language): string {
   if (language === "ts") {
-    return `import __env from '../config/__env.js';
+    return `import envConfig from '../config/envConfig.js';
 import { RedisConfigError } from './redis.errors.js';
 import { RedisConfig } from './redis.types.js';
 
@@ -15,7 +15,7 @@ import { RedisConfig } from './redis.types.js';
  * is a matter of changing the connection string, nothing else.
  */
 export function loadRedisConfig(): RedisConfig {
-  const url = __env.REDIS_URL;
+  const url = envConfig.REDIS_URL;
 
   if (!url || url.trim().length === 0) {
     throw new RedisConfigError(
@@ -25,18 +25,18 @@ export function loadRedisConfig(): RedisConfig {
 
   return {
     url,
-    keyPrefix: __env.REDIS_KEY_PREFIX || undefined,
-    required: __env.REDIS_REQUIRED === 'true',
-    connectTimeoutMs: __env.REDIS_CONNECT_TIMEOUT_MS
-      ? Number(__env.REDIS_CONNECT_TIMEOUT_MS)
+    keyPrefix: envConfig.REDIS_KEY_PREFIX || undefined,
+    required: envConfig.REDIS_REQUIRED === 'true',
+    connectTimeoutMs: envConfig.REDIS_CONNECT_TIMEOUT_MS
+      ? Number(envConfig.REDIS_CONNECT_TIMEOUT_MS)
       : 10_000,
-    shutdownTimeoutMs: __env.REDIS_SHUTDOWN_TIMEOUT_MS
-      ? Number(__env.REDIS_SHUTDOWN_TIMEOUT_MS)
+    shutdownTimeoutMs: envConfig.REDIS_SHUTDOWN_TIMEOUT_MS
+      ? Number(envConfig.REDIS_SHUTDOWN_TIMEOUT_MS)
       : 5_000,
   };
 }`;
   } else {
-    return `import __env from '../config/__env.js';
+    return `import envConfig from '../config/envConfig.js';
 import { RedisConfigError } from './redis.errors.js';
 
 /**
@@ -46,7 +46,7 @@ import { RedisConfigError } from './redis.errors.js';
  * is a matter of changing the connection string, nothing else.
  */
 export function loadRedisConfig() {
-  const url = __env.REDIS_URL;
+  const url = envConfig.REDIS_URL;
 
   if (!url || url.trim().length === 0) {
     throw new RedisConfigError(
@@ -56,13 +56,13 @@ export function loadRedisConfig() {
 
   return {
     url,
-    keyPrefix: __env.REDIS_KEY_PREFIX || undefined,
-    required: __env.REDIS_REQUIRED === 'true',
-    connectTimeoutMs: __env.REDIS_CONNECT_TIMEOUT_MS
-      ? Number(__env.REDIS_CONNECT_TIMEOUT_MS)
+    keyPrefix: envConfig.REDIS_KEY_PREFIX || undefined,
+    required: envConfig.REDIS_REQUIRED === 'true',
+    connectTimeoutMs: envConfig.REDIS_CONNECT_TIMEOUT_MS
+      ? Number(envConfig.REDIS_CONNECT_TIMEOUT_MS)
       : 10_000,
-    shutdownTimeoutMs: __env.REDIS_SHUTDOWN_TIMEOUT_MS
-      ? Number(__env.REDIS_SHUTDOWN_TIMEOUT_MS)
+    shutdownTimeoutMs: envConfig.REDIS_SHUTDOWN_TIMEOUT_MS
+      ? Number(envConfig.REDIS_SHUTDOWN_TIMEOUT_MS)
       : 5_000,
   };
 }`;

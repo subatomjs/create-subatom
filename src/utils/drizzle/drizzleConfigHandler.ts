@@ -17,10 +17,10 @@ import envRequirementFileContent from "./constants/env-requirements-content.js";
 async function drizzleConfigHandler(
   targetDir: string,
   language: ProjectConfig["language"],
-  projectName: ProjectConfig["projectName"],
   database: ProjectConfig["database"],
   orm: ProjectConfig["orm"],
   useRedis: ProjectConfig["useRedis"],
+  useSocket: ProjectConfig["useSocket"],
 ): Promise<void> {
   if (database === "mongodb") {
     throw new Error("Cannot attach Drizzle configuration to MongoDB.");
@@ -41,12 +41,12 @@ async function drizzleConfigHandler(
   //! 4. .env.requirements file ...
   const env_requirements_file_path = path.join(targetDir, ".env.requirements");
 
-  //! 5. __env.ts || __env.js file ...
+  //! 5. envConfig.ts || envConfig.js file ...
   const env_config_file_path = path.join(
     targetDir,
     "src",
     "config",
-    `__env.${language}`,
+    `envConfig.${language}`,
   );
 
   //! 6. subatom.model.ts || subatom.model.js file ...
@@ -73,7 +73,7 @@ async function drizzleConfigHandler(
     //todo: (1) main.ts | main.js
     fs.outputFile(
       main_file_path,
-      mainFileContent(database, orm, language, projectName, useRedis),
+      mainFileContent(database, orm, language, useRedis, useSocket),
       "utf-8",
     ),
 
@@ -112,7 +112,7 @@ async function drizzleConfigHandler(
       "utf-8",
     ),
 
-    //todo: (7) __env.ts || __env.js
+    //todo: (7) envConfig.ts || envConfig.js
     fs.outputFile(
       env_config_file_path,
       envConfigContentRelationalDb(language, database, orm, useRedis),

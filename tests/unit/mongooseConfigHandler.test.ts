@@ -22,6 +22,6 @@ describe('mongooseConfigHandler', () => {
     expect(calls.some((p: string) => p === path.join(target, 'src', 'models', 'subatom.model.ts'))).toBe(true);
     expect(calls.some((p: string) => p === path.join(target, '.env.requirements'))).toBe(true);
     expect(calls.some((p: string) => p === path.join(target, 'src', 'config', 'mongoConnect.ts'))).toBe(true);
-    expect(calls.some((p: string) => p === path.join(target, 'src', 'config', '__env.ts'))).toBe(true);
+    expect(calls.some((p: string) => p === path.join(target, 'src', 'config', 'envConfig.ts'))).toBe(true);
   });
 });

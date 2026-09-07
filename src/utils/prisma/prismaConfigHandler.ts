@@ -16,11 +16,10 @@ async function prismaConfigHandler(
   targetDir: string,
   database: ProjectConfig["database"],
   language: ProjectConfig["language"],
-  projectName: ProjectConfig["projectName"],
   useRedis: ProjectConfig["useRedis"],
   orm: ProjectConfig["orm"],
+  useSocket: ProjectConfig["useSocket"],
 ): Promise<void> {
-
   //* 1) main.ts || main.js file...
   const main_file_path = path.join(
     targetDir,
@@ -48,7 +47,7 @@ async function prismaConfigHandler(
     targetDir,
     "src",
     "config",
-    language === "js" ? "__env.js" : "__env.ts",
+    language === "js" ? "envConfig.js" : "envConfig.ts",
   );
 
   //* 6) /src/models/subatom.prisma...
@@ -79,7 +78,7 @@ async function prismaConfigHandler(
     //todo: (1) main file...
     fs.outputFile(
       main_file_path,
-      mainFileContent(database, orm, language, projectName, useRedis),
+      mainFileContent(database, orm, language, useRedis, useSocket),
       "utf-8",
     ),
 
@@ -94,9 +93,13 @@ async function prismaConfigHandler(
     fs.outputFile(prisma_config_file_path, prismaConfigFileContent(), "utf-8"),
 
     //todo: (4) .env.requirements file...
-    fs.outputFile(env_requirements_path,  envRequirementFileContent(database, useRedis), "utf-8"),
+    fs.outputFile(
+      env_requirements_path,
+      envRequirementFileContent(database, useRedis),
+      "utf-8",
+    ),
 
-    //todo: (5) __env file...
+    //todo: (5) envConfig file...
     fs.outputFile(
       env_config_file_path,
       envConfigContentRelationalDb(language, database, orm, useRedis),

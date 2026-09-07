@@ -25,7 +25,7 @@ describe('prismaConfigHandler', () => {
     expect(calls.some((p: string) => p === path.join(target, 'prisma.ts'))).toBe(true);
     expect(calls.some((p: string) => p === path.join(target, 'prisma.config.ts'))).toBe(true);
     expect(calls.some((p: string) => p === path.join(target, '.env.requirements'))).toBe(true);
-    expect(calls.some((p: string) => p === path.join(target, 'src', 'config', '__env.ts'))).toBe(true);
+    expect(calls.some((p: string) => p === path.join(target, 'src', 'config', 'envConfig.ts'))).toBe(true);
     expect(calls.some((p: string) => p === path.join(target, 'src', 'models', 'subatom.prisma'))).toBe(true);
     expect(calls.some((p: string) => p === path.join(target, 'prisma', 'schema.prisma'))).toBe(true);
     expect(calls.some((p: string) => p === path.join(target, 'scripts', 'schema_builder.ts'))).toBe(true);

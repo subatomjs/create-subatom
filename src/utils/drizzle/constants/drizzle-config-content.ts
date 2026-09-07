@@ -11,22 +11,22 @@ function drizzleConfigFileContent(
 
   if (database === "postgresql") {
     return `import { defineConfig } from 'drizzle-kit';
-import __env from './src/config/__env.js';
+import envConfig from './src/config/envConfig.js';
 
 export default defineConfig({
   schema: './src/db/schema.${extension}',
   out: './drizzle',
   dialect: '${database}',
   dbCredentials: {
-    url: __env.DATABASE_URL,
+    url: envConfig.DATABASE_URL,
   },
 });`;
 } else if (database === "mysql") {
     return `import { defineConfig } from 'drizzle-kit';
 import { parseDatabaseUrl } from "./src/db/dbUrl.js";
-import __env from './src/config/__env.js';
+import envConfig from './src/config/envConfig.js';
 
-const { connectionString } = parseDatabaseUrl(__env.DATABASE_URL);
+const { connectionString } = parseDatabaseUrl(envConfig.DATABASE_URL);
 
 export default defineConfig({
   schema: './src/db/schema.${extension}',
@@ -40,12 +40,12 @@ export default defineConfig({
 });`;
 } else if (database === "sqlite") {
     return `import { defineConfig } from 'drizzle-kit';
-import __env from './src/config/__env.js';
+import envConfig from './src/config/envConfig.js';
 
 const dbCredentials =
-  __env.DB.kind === 'libsql'
-    ? { url: __env.DB.url, authToken: __env.DB.authToken }
-    : { url: __env.DB.url };
+  envConfig.DB.kind === 'libsql'
+    ? { url: envConfig.DB.url, authToken: envConfig.DB.authToken }
+    : { url: envConfig.DB.url };
 
 export default defineConfig({
   schema: './src/db/schema.${extension}',
