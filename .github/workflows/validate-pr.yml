@@ -1,6 +1,9 @@
 name: Validate Pull Request
 
 on:
+    push:
+        branches:
+            - main
     pull_request:
         branches:
             - main
@@ -8,13 +11,13 @@ on:
 
 # Cancel in-progress runs on the same branch when new commits are pushed
 concurrency:
-    group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+    group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
     cancel-in-progress: true
 
 jobs:
     validate:
-        # Skip running validation on draft pull requests
-        if: github.event.pull_request.draft == false
+        # Run if it's a push event, or if it's a PR that is not a draft
+        if: github.event.pull_request == null || github.event.pull_request.draft == false
         runs-on: ubuntu-latest
 
         steps:
@@ -29,11 +32,13 @@ jobs:
 
             - name: Install Dependencies
               run: npm ci --ignore-scripts
+              env:
+                  HUSKY: 0
 
             - name: Typecheck
               run: npm run typecheck
 
-            - name: Biome Linter & Formatter
+            - name: Biome Linter
               run: npm run lint
 
             - name: Unit Tests
