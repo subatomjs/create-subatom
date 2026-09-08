@@ -5,7 +5,7 @@ This page documents observable behavior that third-party tooling and users can r
 ## Invocation
 
 ```bash
-create-subatom [project-name]
+npm create subatom@latest [project_name]
 ```
 
 The package binary points to `dist/bin/create.js`.
@@ -13,7 +13,7 @@ The package binary points to `dist/bin/create.js`.
 ### Explicit Name
 
 ```bash
-create-subatom my-api
+npm create subatom my-api
 ```
 
 The name is passed to the prompt layer and is used for the target directory and final package name after npm-name normalization.
@@ -21,7 +21,7 @@ The name is passed to the prompt layer and is used for the target directory and 
 ### Current Directory
 
 ```bash
-create-subatom .
+npm create subatom .
 ```
 
 The current directory is used as the target. Its basename must not contain whitespace, uppercase characters, npm-disallowed characters, or an invalid npm package pattern. Invalid names produce `InvalidProjectNameError` and a non-zero exit.

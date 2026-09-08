@@ -6,12 +6,12 @@ This documentation is written for third-party developers who need to use, integr
 
 ## Documentation Map
 
-- [Getting Started](getting-started.md): prerequisites, commands, generated output, and operational behavior.
-- [Architecture](architecture.md): module boundaries, execution flow, data contracts, and filesystem transaction behavior.
-- [CLI Contract](cli-contract.md): command-line arguments, prompt order, supported combinations, output, cancellation, and exit behavior.
-- [Templates and Snippets](templates.md): template directory conventions, package snippets, dynamic files, and adding a feature safely.
-- [Extension Guide](extension-guide.md): how to add an ORM, database, feature, package-manager behavior, or validation.
-- [Testing and Release](testing-and-release.md): unit tests, coverage, Biome, E2E tests, build, publishing, and troubleshooting.
+- [Getting Started](/docs/getting-started.md): prerequisites, commands, generated output, and operational behavior.
+- [Architecture](/docs/architecture.md): module boundaries, execution flow, data contracts, and filesystem transaction behavior.
+- [CLI Contract](/docs/cli-contract.md): command-line arguments, prompt order, supported combinations, output, cancellation, and exit behavior.
+- [Templates and Snippets](/docs/templates.md): template directory conventions, package snippets, dynamic files, and adding a feature safely.
+- [Extension Guide](/docs/extension-guide.md): how to add an ORM, database, feature, package-manager behavior, or validation.
+- [Testing and Release](/docs/testing-and-release.md): unit tests, coverage, Biome, E2E tests, build, publishing, and troubleshooting.
 
 ## Supported Configuration Model
 

@@ -1,0 +1,72 @@
+name: Publish Package to npm
+
+on:
+    push:
+        branches:
+            - main
+        paths:
+            - "package.json"
+
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            id-token: write # Required for provenance
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+                  registry-url: "https://registry.npmjs.org"
+
+            - name: Check if version is already published
+              id: check_version
+              run: |
+                  PACKAGE_NAME=$(node -p "require('./package.json').name")
+                  CURRENT_VERSION=$(node -p "require('./package.json').version")
+
+                  # Check if this specific version already exists on npm
+                  VERSION_EXISTS=$(npm view "${PACKAGE_NAME}@${CURRENT_VERSION}" version 2>/dev/null || echo "")
+
+                  echo "Current version in repo: $CURRENT_VERSION"
+
+                  if [ -z "$VERSION_EXISTS" ]; then
+                    echo "is_new_version=true" >> "$GITHUB_OUTPUT"
+                    echo "Version $CURRENT_VERSION is new. Proceeding with publish."
+                  else
+                    echo "is_new_version=false" >> "$GITHUB_OUTPUT"
+                    echo "Version $CURRENT_VERSION already exists on npm. Skipping publish."
+                  fi
+
+            - name: Install dependencies
+              if: steps.check_version.outputs.is_new_version == 'true'
+              run: npm ci
+              env:
+                  HUSKY: 0 # Disables husky hooks during CI install
+
+            - name: Typecheck
+              if: steps.check_version.outputs.is_new_version == 'true'
+              run: npm run typecheck
+
+            - name: Lint
+              if: steps.check_version.outputs.is_new_version == 'true'
+              run: npm run lint
+
+            - name: Unit Tests
+              if: steps.check_version.outputs.is_new_version == 'true'
+              run: npm run test:unit
+
+            - name: Build
+              if: steps.check_version.outputs.is_new_version == 'true'
+              run: npm run build
+
+            - name: Publish to npm
+              if: steps.check_version.outputs.is_new_version == 'true'
+              run: npm publish --provenance --access public
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.CREATE_SUBATOM_NPM_TOKEN }}

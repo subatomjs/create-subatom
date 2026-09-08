@@ -1,6 +1,6 @@
 {
   "name": "create-subatom",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "description": "CLI tool of subatom framework.",
   "type": "module",
   "main": "./dist/create.js",
@@ -42,7 +42,8 @@
     "test:unit-coverage": "npx vitest run --coverage",
     "test:e2e": "node tests/e2e/run-e2e.mjs",
     "lint": "biome lint src tests",
-    "lint:fix": "biome lint --write src tests"
+    "lint:fix": "biome lint --write src tests",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.12",
