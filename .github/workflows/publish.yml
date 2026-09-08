@@ -4,15 +4,70 @@ on:
     push:
         branches:
             - main
-        paths:
-            - "package.json"
+    workflow_dispatch: # Allows manual trigger from GitHub Actions tab if needed
 
 jobs:
+    evaluate_trigger:
+        runs-on: ubuntu-latest
+        permissions:
+            actions: read # Required to inspect previous workflow runs
+            contents: read
+        outputs:
+            should_run: ${{ steps.decide.outputs.should_run }}
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 2 # Fetch previous commit to check diff
+
+            - name: Evaluate execution conditions
+              id: decide
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  # 1. Check if package.json was modified in the latest commit
+                  DIFF_CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -E '^package\.json$' || echo "")
+
+                  # 2. Get the status of the most recent prior workflow run on main
+                  LAST_RUN_CONCLUSION=$(gh run list --workflow="publish.yml" --branch="main" --limit 2 --json conclusion -q '.[1].conclusion' 2>/dev/null || echo "")
+
+                  echo "Changed package.json: $DIFF_CHANGED"
+                  echo "Previous run conclusion: $LAST_RUN_CONCLUSION"
+
+                  # Condition 1: Prior run failed (and needs a fix commit)
+                  if [ "$LAST_RUN_CONCLUSION" = "failure" ]; then
+                    echo "Previous run failed. Proceeding with fix build."
+                    echo "should_run=true" >> "$GITHUB_OUTPUT"
+                    exit 0
+                  fi
+
+                  # Condition 2: package.json was updated in this push
+                  if [ -n "$DIFF_CHANGED" ]; then
+                    echo "package.json was updated. Checking npm registry..."
+                    PACKAGE_NAME=$(node -p "require('./package.json').name")
+                    CURRENT_VERSION=$(node -p "require('./package.json').version")
+                    VERSION_EXISTS=$(npm view "${PACKAGE_NAME}@${CURRENT_VERSION}" version 2>/dev/null || echo "")
+
+                    if [ -z "$VERSION_EXISTS" ]; then
+                      echo "Version $CURRENT_VERSION is new. Proceeding."
+                      echo "should_run=true" >> "$GITHUB_OUTPUT"
+                      exit 0
+                    else
+                      echo "Version $CURRENT_VERSION already exists on npm. Skipping."
+                    fi
+                  fi
+
+                  # Fallback: Neither condition met
+                  echo "No failed prior run and no new package.json bump. Halting."
+                  echo "should_run=false" >> "$GITHUB_OUTPUT"
+
     publish:
+        needs: evaluate_trigger
+        if: needs.evaluate_trigger.outputs.should_run == 'true'
         runs-on: ubuntu-latest
         permissions:
             contents: read
-            id-token: write # Required for provenance and OIDC / Trusted Publishing
+            id-token: write # Required for npm provenance
 
         steps:
             - name: Checkout repository
@@ -24,35 +79,24 @@ jobs:
                   node-version: 24
                   registry-url: "https://registry.npmjs.org"
 
-            - name: Check if version is already published
-              id: check_version
-              run: |
-                  PACKAGE_NAME=$(node -p "require('./package.json').name")
-                  CURRENT_VERSION=$(node -p "require('./package.json').version")
-
-                  # Check if this specific version already exists on npm
-                  VERSION_EXISTS=$(npm view "${PACKAGE_NAME}@${CURRENT_VERSION}" version 2>/dev/null || echo "")
-
-                  echo "Current version in repo: $CURRENT_VERSION"
-
-                  if [ -z "$VERSION_EXISTS" ]; then
-                    echo "is_new_version=true" >> "$GITHUB_OUTPUT"
-                    echo "Version $CURRENT_VERSION is new. Proceeding with publish."
-                  else
-                    echo "is_new_version=false" >> "$GITHUB_OUTPUT"
-                    echo "Version $CURRENT_VERSION already exists on npm. Skipping publish."
-                  fi
-
             - name: Install dependencies
-              if: steps.check_version.outputs.is_new_version == 'true'
               run: npm ci
+              env:
+                  HUSKY: 0
+
+            - name: Typecheck
+              run: npm run typecheck
 
             - name: Lint
-              if: steps.check_version.outputs.is_new_version == 'true'
               run: npm run lint
 
+            - name: Unit Tests
+              run: npm run test:unit
+
+            - name: Build
+              run: npm run build
+
             - name: Publish to npm
-              if: steps.check_version.outputs.is_new_version == 'true'
               run: npm publish --provenance --access public
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.CREATE_SUBATOM_NPM_TOKEN }}
