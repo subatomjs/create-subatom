@@ -1,7 +1,7 @@
 {
   "name": "create-subatom",
   "version": "0.10.4",
-  "amendment": "0.0.1",
+  "amendment": "0.0.2",
   "description": "CLI tool of subatom framework.",
   "type": "module",
   "main": "./dist/create.js",
@@ -24,7 +24,7 @@
   "author": "Kunal Chandra Das <kunalchandradasofficial@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/subatomjs/subatom.git"
+    "url": "git+https://github.com/subatomjs/create-subatom.git"
   },
   "engines": {
     "node": ">= 24"
