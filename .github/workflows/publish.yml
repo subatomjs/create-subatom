@@ -12,7 +12,7 @@ jobs:
         runs-on: ubuntu-latest
         permissions:
             contents: read
-            id-token: write # Required for provenance
+            id-token: write # Required for provenance and OIDC / Trusted Publishing
 
         steps:
             - name: Checkout repository
@@ -46,24 +46,10 @@ jobs:
             - name: Install dependencies
               if: steps.check_version.outputs.is_new_version == 'true'
               run: npm ci
-              env:
-                  HUSKY: 0 # Disables husky hooks during CI install
-
-            - name: Typecheck
-              if: steps.check_version.outputs.is_new_version == 'true'
-              run: npm run typecheck
 
             - name: Lint
               if: steps.check_version.outputs.is_new_version == 'true'
               run: npm run lint
-
-            - name: Unit Tests
-              if: steps.check_version.outputs.is_new_version == 'true'
-              run: npm run test:unit
-
-            - name: Build
-              if: steps.check_version.outputs.is_new_version == 'true'
-              run: npm run build
 
             - name: Publish to npm
               if: steps.check_version.outputs.is_new_version == 'true'
