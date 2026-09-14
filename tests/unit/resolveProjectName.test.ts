@@ -21,31 +21,31 @@ describe('resolveProjectNameArg', () => {
   it('throws InvalidProjectNameError for bad current directory name', () => {
     // simulate by temporarily mocking process.cwd
     const originalCwd = process.cwd;
-    // @ts-expect-error
+
     process.cwd = () => '/some/Bad Name!';
     try {
       expect(() => resolve.resolveProjectNameArg('.')).toThrow(resolve.InvalidProjectNameError);
     } finally {
-      // @ts-expect-error
+
       process.cwd = originalCwd;
     }
   });
 
   it('uses the current directory for a valid name', () => {
     const originalCwd = process.cwd;
-    // @ts-expect-error
+
     process.cwd = () => '/tmp/my-app';
     try {
       expect(resolve.resolveProjectNameArg('.')).toEqual({ name: 'my-app', useCurrentDir: true });
     } finally {
-      // @ts-expect-error
+
       process.cwd = originalCwd;
     }
   });
 
   it('falls back to my-app when slugifying an invalid-only name', () => {
     const originalCwd = process.cwd;
-    // @ts-expect-error
+
     process.cwd = () => '/!!!';
     try {
       try {
@@ -55,14 +55,14 @@ describe('resolveProjectNameArg', () => {
         expect((error as resolve.InvalidProjectNameError).cause).toContain('my-app');
       }
     } finally {
-      // @ts-expect-error
+
       process.cwd = originalCwd;
     }
   });
 
   it('rejects names beginning with an underscore', () => {
     const originalCwd = process.cwd;
-    // @ts-expect-error
+
     process.cwd = () => '/tmp/_private';
     try {
       try {
@@ -72,19 +72,19 @@ describe('resolveProjectNameArg', () => {
         expect((error as resolve.InvalidProjectNameError).cause).toContain("starts with '.' or '_'");
       }
     } finally {
-      // @ts-expect-error
+
       process.cwd = originalCwd;
     }
   });
 
   it('rejects a name that fails the npm pattern without other violations', () => {
     const originalCwd = process.cwd;
-    // @ts-expect-error
+
     process.cwd = () => '/tmp/@';
     try {
       expect(() => resolve.resolveProjectNameArg('.')).toThrow(resolve.InvalidProjectNameError);
     } finally {
-      // @ts-expect-error
+
       process.cwd = originalCwd;
     }
   });
