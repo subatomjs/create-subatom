@@ -1,13 +1,43 @@
 # Getting Started
 
+`create-subatom` is the CLI scaffolder for creating a new Subatom project from the command line.
+
 ## Prerequisites
 
-- Node.js 24 or newer, matching the `engines` declaration in `package.json`.
-- npm, pnpm, yarn, or bun for dependency installation.
-- Git is recommended. Git initialization is non-fatal if Git is unavailable.
-- `expect` is required for the PTY-based E2E suite on macOS/Linux.
+- **Node.js 24 or newer**.
+- One of the supported package managers: **npm, pnpm, yarn, or bun**.
+- Git is recommended. Git initialization is best-effort and does not prevent project generation when Git is unavailable.
+- `expect` is required for the PTY-based E2E test suite on macOS/Linux.
 
-## Install and Build the CLI
+The Node.js requirement is declared by the package's `engines` field.
+
+## Use the Published CLI
+
+Create a project with:
+
+```bash
+npm create subatom@latest my-app
+```
+
+The CLI interactively asks for:
+
+1. Language — TypeScript or JavaScript.
+2. ORM — Prisma, Drizzle, Mongoose, or None.
+3. Database — based on the selected ORM.
+4. Redis.
+5. ESLint.
+6. Vitest.
+7. WebSocket.
+
+You can also scaffold into the current directory:
+
+```bash
+npm create subatom@latest .
+```
+
+When using `.`, the current directory name must be a valid npm package name.
+
+## Install and Build from Source
 
 From the repository root:
 
@@ -16,69 +46,81 @@ npm install
 npm run build
 ```
 
-The build performs these operations:
+The build process:
 
 1. Removes `dist`.
 2. Type-checks the TypeScript source.
-3. Bundles `src/bin/create.ts` to `dist/bin/create.js`.
-4. Copies `templates` to `dist/templates`.
-5. Marks the CLI entrypoint executable.
+3. Bundles the CLI entry point.
+4. Copies the `templates` directory into the distribution.
+5. Marks the CLI entry point executable.
 
-The published package exposes `dist/bin/create.js` through the `create-subatom` binary.
+The published package exposes:
 
-## Run Locally
+```text
+dist/bin/create.js
+```
 
-Run the source CLI with:
+through the `create-subatom` binary.
+
+## Run the CLI Locally
+
+Run the TypeScript source directly:
 
 ```bash
 npm run dev
 ```
 
-Run the built CLI directly with:
+Run the built CLI directly:
 
 ```bash
 node dist/bin/create.js my-app
 ```
 
-The optional project-name argument skips the project-name prompt. Passing `.` scaffolds into the current working directory after validating its directory name as an npm package name.
+The optional project-name argument avoids the interactive project-name prompt.
 
-## Generated Project Lifecycle
+## What Happens During Generation
 
-A normal run performs the following stages:
+A normal run follows this lifecycle:
 
-1. Resolve the CLI project-name argument.
-2. Ask the interactive language, ORM, database, and feature questions.
-3. Stage the target directory in a transaction-owned sibling directory.
-4. Copy the base language and selected feature/ORM templates.
-5. Generate dynamic files such as `main.ts`/`main.js`, server files, route files, environment setup, and configuration files.
-6. Merge all package snippets into `package.json` and remove consumed snippets.
-7. Install dependencies using the package manager that launched the CLI.
-8. Initialize Git and create a first commit when possible.
-9. Atomically replace the destination with the staged project.
-10. Print the completion instructions.
+1. Resolve the project-name argument.
+2. Collect the interactive configuration.
+3. Create a temporary staging directory.
+4. Copy the base and selected feature/ORM templates.
+5. Generate dynamic source/configuration files.
+6. Merge package snippets into `package.json`.
+7. Install dependencies using the detected package manager.
+8. Initialize Git when possible.
+9. Atomically replace the destination with the completed project.
+10. Display completion instructions.
 
-If a mutating stage fails, the transaction removes staged output and restores the original target directory when one existed.
+The scaffolding process is transaction-based. If a mutating stage fails, staged output is removed and an existing destination is restored when applicable.
 
 ## Package Manager Detection
 
-The CLI checks `npm_config_user_agent`:
+The CLI uses `npm_config_user_agent` to determine which package manager launched it.
 
-- `pnpm` selects pnpm.
-- `yarn` selects yarn.
-- `bun` selects bun.
-- `npm` or an unknown/unset value selects npm.
+| Detected manager | Install command |
+|---|---|
+| npm | `install` |
+| pnpm | `install` |
+| yarn | `install` |
+| bun | `install` |
 
-The generated project is installed with that manager's install command. To intentionally bypass installation for local E2E debugging only:
+If the user agent is missing or unknown, npm is used.
+
+Normal CLI usage installs dependencies. The E2E-only environment variable:
 
 ```bash
-SUBATOM_E2E_SKIP_INSTALL=1 npm run test:e2e
+SUBATOM_E2E_SKIP_INSTALL=1
 ```
 
-Normal CLI usage does not skip installation.
+can bypass installation for local E2E debugging.
 
-## Generated Project Verification
+## Verify a Generated Project
 
-After generation, third-party integrations should run in the generated directory:
+After scaffolding, work inside the generated directory.
+
+Typical project verification commands are:
 
 ```bash
 npm install
@@ -86,4 +128,20 @@ npm run build
 npm test
 ```
 
-Database migration commands require real connection settings and are not executed by the scaffolding E2E suite.
+Use the generated project's own package scripts and selected configuration when the template provides additional commands.
+
+Database migrations require real database connection settings and are not executed by the scaffolding E2E suite.
+
+## Cancellation and Failures
+
+Cancelling an interactive prompt prints:
+
+```text
+Operation cancelled.
+```
+
+and exits with status `0`.
+
+Invalid project names and initialization failures produce non-zero exit statuses.
+
+Git failures are non-fatal: the project can still be generated when Git initialization or the initial commit cannot be completed.
