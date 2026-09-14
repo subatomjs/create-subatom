@@ -1,5 +1,6 @@
+/** biome-ignore-all lint/complexity/noUselessStringRaw: explanation */
 import { fileURLToPath } from "node:url";
-import type { Database, Language, Orm } from "../types.js";
+import type { Database, Language, Orm, ProjectConfig } from "../types.js";
 
 const TEMPLATES_DIR: string = fileURLToPath(
   new URL("../../templates", import.meta.url),
@@ -86,20 +87,20 @@ function mainFileContent(
   if (hasOrm && hasDb) {
     if (orm === "mongoose") {
       dbImports = `import connectDB from "./src/config/mongoConnect.js";\nimport mongoose from "mongoose";\n`;
-      dbConnectLogic = `console.log("⏳ Connecting to MongoDB (Mongoose)...");\n    await connectDB();\n    console.log("✅ Connected to MongoDB successfully");\n`;
-      dbDisconnectLogic = `if (mongoose.connection.readyState !== 0) {\n        console.log("🗄️ [Shutdown] Disconnecting Mongoose...");\n        await mongoose.disconnect();\n      }`;
+      dbConnectLogic = `console.info("⏳ Connecting to MongoDB (Mongoose)...");\n    await connectDB();\n    console.info("✅ Connected to MongoDB successfully");\n`;
+      dbDisconnectLogic = `if (mongoose.connection.readyState !== 0) {\n        console.info("🗄️ [Shutdown] Disconnecting Mongoose...");\n        await mongoose.disconnect();\n      }`;
     } else if (orm === "prisma") {
       dbImports = `import prisma from "./prisma.js";\n`;
-      dbConnectLogic = `console.log("⏳ Connecting to ${database} (Prisma)...");\n    await prisma.$connect();\n    console.log("✅ Connected to ${database} (Prisma) successfully");\n`;
-      dbDisconnectLogic = `console.log("🗄️ [Shutdown] Disconnecting Prisma...");\n      await prisma.$disconnect();`;
+      dbConnectLogic = `console.info("⏳ Connecting to ${database} (Prisma)...");\n    await prisma.$connect();\n    console.info("✅ Connected to ${database} (Prisma) successfully");\n`;
+      dbDisconnectLogic = `console.info("🗄️ [Shutdown] Disconnecting Prisma...");\n      await prisma.$disconnect();`;
     } else if (orm === "drizzle" && database === "sqlite") {
       dbImports = `import { checkDatabaseConnection, closeDatabase } from "./src/db/db_pool.js";\n`;
-      dbConnectLogic = `console.log("⏳ Verifying SQLite (Drizzle) connection...");\n    const healthy = await checkDatabaseConnection();\n    if (!healthy) throw new Error("Database health check failed.");\n    console.log("✅ Connected to SQLite (Drizzle) successfully");\n`;
-      dbDisconnectLogic = `console.log("🗄️ [Shutdown] Closing SQLite pool...");\n      closeDatabase();`;
+      dbConnectLogic = `console.info("⏳ Verifying SQLite (Drizzle) connection...");\n    const healthy = await checkDatabaseConnection();\n    if (!healthy) throw new Error("Database health check failed.");\n    console.info("✅ Connected to SQLite (Drizzle) successfully");\n`;
+      dbDisconnectLogic = `console.info("🗄️ [Shutdown] Closing SQLite pool...");\n      closeDatabase();`;
     } else {
       dbImports = `import { db } from "./src/db/db_pool.js";\nimport { sql } from "drizzle-orm";\n`;
-      dbConnectLogic = `console.log("⏳ Verifying ${database} (Drizzle) connection...");\n    await db.execute(sql\`SELECT 1\`);\n    console.log("✅ Connected to ${database} (Drizzle) successfully");\n`;
-      dbDisconnectLogic = `console.log("🗄️ [Shutdown] Releasing Drizzle connection pool...");`;
+      dbConnectLogic = `console.info("⏳ Verifying ${database} (Drizzle) connection...");\n    await db.execute(sql\`SELECT 1\`);\n    console.info("✅ Connected to ${database} (Drizzle) successfully");\n`;
+      dbDisconnectLogic = `console.info("🗄️ [Shutdown] Releasing Drizzle connection pool...");`;
     }
   }
 
@@ -108,7 +109,7 @@ function mainFileContent(
     ? `import { bootstrapRedis } from "./src/redis/redis.bootstrap.js";\n`
     : "";
   const redisConnect = useRedis
-    ? `console.log("⏳ Initializing Redis client...");\n    await bootstrapRedis();\n    console.log("✅ Redis initialized");\n`
+    ? `console.info("⏳ Initializing Redis client...");\n    await bootstrapRedis();\n    console.info("✅ Redis initialized");\n`
     : "";
 
   // 5. Build file content
@@ -130,10 +131,10 @@ async function main()${returnType} {
   let isDraining = false;
 
   const gracefulShutdown = async (${signalType}) => {
-    if (isDraining) return;
+    if (isDraining) {return};
     isDraining = true;
 
-    console.log(\`\\n🛑 [Shutdown] Received \${signal}. Starting coordinated teardown...\`);
+    console.warn(\`\\n🛑 [Shutdown] Received \${signal}. Starting coordinated teardown...\`);
 
     const forceExitTimer = setTimeout(() => {
       console.error("⚠️ [Shutdown] Draining timed out. Forcing process exit.");
@@ -144,22 +145,21 @@ async function main()${returnType} {
     try {
       // 1. Terminate WebSocket connections
       if (io) {
-        console.log("🔌 [Shutdown] Closing WebSocket engine...");
+        console.info("🔌 [Shutdown] Closing WebSocket engine...");
         await io.close();
       }
 
       // 2. Stop HTTP listener
       if (httpServer && typeof httpServer.close === "function") {
-        console.log("🌐 [Shutdown] Stopping HTTP listener...");
+        console.warn("🌐 [Shutdown] Stopping HTTP listener...");
         await new Promise((resolve, reject) => {
-          httpServer!.close((err) => (err ? reject(err) : resolve(undefined)));
+         ${isTs ? "httpServer!.close((err) => (err ? reject(err) : resolve(undefined)));" : "httpServer.close((err) => (err ? reject(err) : resolve(undefined)));"}
         });
       }
 
       // 3. Disconnect database (if any)
       ${dbDisconnectLogic}
-
-      console.log("✅ [Shutdown] Clean shutdown completed.");
+      console.info("✅ [Shutdown] Clean shutdown completed.");
       process.exit(0);
     } catch (error) {
       console.error("❌ [Shutdown] Error during teardown:", error);
@@ -181,9 +181,9 @@ async function main()${returnType} {
 
   try {
     ${dbConnectLogic}${redisConnect}    // HTTP Engine
-    console.log("⏳ Starting Subatom HTTP engine...");
+    console.info("⏳ Starting Subatom HTTP engine...");
     httpServer = await server.start();
-    console.log("✅ Subatom HTTP engine listening");
+    console.info("✅ Subatom HTTP engine listening");
 
       // WebSocket mount
     if (!httpServer) {
@@ -192,7 +192,7 @@ async function main()${returnType} {
 
     // WebSocket mount
     io = initSocket(httpServer);
-    console.log("✅ Subatom Pulse mounted on /ws");
+    console.info("✅ Subatom Pulse mounted on /ws");
   } catch (error) {
     console.error("❌ Startup sequence failed:", ${logError});
     await gracefulShutdown("STARTUP_FAILURE");
@@ -228,9 +228,9 @@ ${redisImport}${dbImports}
 async function main()${returnType} {
   try {
     ${dbConnectLogic}${redisConnect}    // HTTP Engine
-    console.log("⏳ Starting Subatom HTTP engine...");
+    console.info("⏳ Starting Subatom HTTP engine...");
     await server.start();
-    console.log("✅ Subatom HTTP engine listening");
+    console.info("✅ Subatom HTTP engine listening");
   } catch (error) {
     console.error("❌ Failed to start application:", ${logError});
     process.exit(1);
@@ -374,8 +374,8 @@ export default server;`;
 
 // src/user.routes.ts || src/user.routes.ts
 function userRouterFileContent(language: "ts" | "js"): string {
- if(language === "ts"){
-  return `import { type IRouter, Router, file, type IRouteMiddleware } from "subatom";
+  if (language === "ts") {
+    return `import { type IRouter, Router, file, type IRouteMiddleware } from "subatom";
 import {
   createUserSchema,
   listUsersSchema,
@@ -454,9 +454,9 @@ userRouter.delete("/users/:id", {
 });
 
 export default userRouter;
-`
- }else{
-  return `import { Router, file } from "subatom";
+`;
+  } else {
+    return `import { Router, file } from "subatom";
 import {
   createUserSchema,
   listUsersSchema,
@@ -535,12 +535,12 @@ userRouter.delete("/users/:id", {
 });
 
 export default userRouter;
-`
- }
+`;
+  }
 }
 
 // src/user.schema.ts || src/user.schema.ts
-function userSchemaFileContent():string {
+function userSchemaFileContent(): string {
   return `import infer from "subatom-infer";
 
 
@@ -608,12 +608,12 @@ export {
   userIdParamSchema,
   updateUserSchema,
 };
-`
+`;
 }
 
 // src/user.controller.ts || src/user.controller.ts
-function userControllerFileContent(language: "ts" | "js"):string{
-  if(language === "ts"){
+function userControllerFileContent(language: "ts" | "js"): string {
+  if (language === "ts") {
     return `import { type IController, uuid } from "subatom";
 import {
   createUserSchema,
@@ -834,8 +834,8 @@ export const deleteUserController: IController<
     message: "User '" + id + "' deleted successfully",
   });
 };
-`
-  }else{
+`;
+  } else {
     return `import { uuid } from "subatom";
 
 // ==========================================
@@ -1023,10 +1023,9 @@ export const deleteUserController = (ctx) => {
     success: true,
     message: "User '" + id + "' deleted successfully",
   });
-};`
+};`;
   }
 }
-
 
 // subatom.config.ts || subatom.config.js
 function subatomConfigContent(language: Language): string {
@@ -1062,6 +1061,194 @@ export default defineConfig({
 });`;
   }
 }
+
+// README.md
+const readmeFileGenerator = (config: ProjectConfig) => {
+  const { language, orm, database, useRedis, useEslint, useVitest, useSocket } =
+    config;
+
+  return String.raw`# Subatom + ${language === "js" ? "JavaScript" : "TypeScript"}
+
+Build fast, reliable, and production-ready backend applications with **Subatom**.
+
+## 🌐 Documentation
+
+- **Subatom Documentation:** https://subatomjs.dev
+- **Subatom Infer:** https://infer.subatomjs.dev
+- **Subatom Pulse:** https://pulse.subatomjs.dev
+
+---
+
+## 🚀 Features
+
+1. Auto-generated API documentation available at the ${`\`/docs\``} URL
+2. Runtime schema validation
+3. Fast TypeScript backend framework
+4. Modern HTTP methods
+5. Pre-configured Redis, ORM, database, Vitest, and ESLint support
+6. Fast and reliable architecture
+
+---
+
+## 🛠️ Getting Started
+
+### Install dependencies
+
+${`\`\`\`bash
+npm install
+\`\`\``}
+
+### Development
+
+${
+  language === "js"
+    ? `\`\`\`bash
+npm run dev
+\`\`\``
+    : `\`\`\`bash
+npm run build
+npm run dev
+\`\`\``
+}
+
+### Start the application
+
+${`\`\`\`bash
+npm start
+\`\`\``}
+
+Or, if your project provides a preview script:
+
+${`\`\`\`bash
+npm run preview
+\`\`\``}
+
+---
+
+## 🧪 Testing
+
+Run the test suite with:
+
+${`\`\`\`bash
+npm run test
+\`\`\``}
+
+### Test Coverage
+
+To generate test coverage:
+
+${`\`\`\`bash
+npm run test:coverage
+\`\`\``}
+
+---
+
+## 🧰 Tech Stack
+
+| Technology | Configuration |
+|---|---|
+| Language | ${language === "js" ? "JavaScript" : "TypeScript"} |
+| ORM | ${orm === "none" ? "N/A" : orm} |
+| Database | ${database === "none" ? "N/A" : database} |
+| Framework | Subatom |
+| Schema Validator | Subatom Infer |${
+    useRedis
+      ? `
+| Caching | Redis |`
+      : ""
+  }${
+    useEslint
+      ? `
+| Linting | ESLint |`
+      : ""
+  }${
+    useVitest
+      ? `
+| Testing | Vitest + V8 |`
+      : ""
+  }${
+    useSocket
+      ? `
+| WebSocket Connection | Subatom Pulse |`
+      : ""
+  }
+
+---
+
+## 📁 Ideal Folder Structure
+
+${`\`\`\`text
+Subatom_Server/
+├── public/                 # Static assets served directly at runtime
+├── scripts/                # Runtime scripts and shell files
+├── tests/                  # Test cases
+├── src/
+│   ├── config/             # Server configuration files
+│   ├── controllers/        # Route controllers
+│   ├── routes/             # Route handlers
+│   ├── schema/             # Runtime validation using Subatom Infer
+│   ├── models/             # Database schemas
+│   ├── redis/              # Redis cache configuration
+│   ├── utils/              # Utility functions and helpers
+│   ├── middlewares/        # Application middlewares
+│   ├── web-socket/         # Subatom Pulse WebSocket connection
+│   └── server.ts           # Register routes and middleware
+├── .gitignore              # Git ignored files
+├── main.ts                 # Main application entry point
+├── eslint.config.mts       # ESLint configuration
+├── package.json             # Project dependencies and scripts
+├── subatom.config.ts       # Subatom server configuration
+└── vitest.config.ts        # Vitest configuration
+\`\`\``}
+
+> **Note:** Some directories and configuration files may not be present depending on the options selected during project creation.
+
+---
+
+## 🌐 Deployment
+
+To build the application for production, run:
+
+${`\`\`\`bash
+npm run build
+\`\`\``}
+
+This generates a production-ready ${`\`dist\``} folder.
+
+You can deploy the resulting application using your preferred Node.js hosting platform.
+
+---
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome!
+
+Please visit the project's GitHub repository to:
+
+- Report bugs
+- Request features
+- Submit pull requests
+- Improve documentation
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License**.
+
+See the ${`\`LICENSE\``} file for more information.
+
+---
+
+## ⚡ Built with Subatom
+
+This project was generated using **Subatom**.
+
+- 🌐 https://subatomjs.dev
+- 🧩 https://infer.subatomjs.dev
+- ⚡ https://pulse.subatomjs.dev
+`;
+};
 
 const envConfigContentRelationalDb = (
   fileType: Language,
@@ -1197,7 +1384,6 @@ export default envConfig;`;
     }
   }
 };
-
 
 const GIT_IGNORE_CONTENT = `
 # Logs
@@ -1335,7 +1521,7 @@ dist
 !.yarn/sdks
 !.yarn/versions
 
-`
+`;
 
 export {
   subatomConfigContent,
@@ -1345,9 +1531,10 @@ export {
   dotEnvFileContent,
   userRouterFileContent,
   userSchemaFileContent,
+  readmeFileGenerator,
   userControllerFileContent,
   TEMPLATES_DIR,
   SNIPPET_FILENAME,
   SNIPPET_PATTERN,
-  GIT_IGNORE_CONTENT
+  GIT_IGNORE_CONTENT,
 };

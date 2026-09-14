@@ -1,8 +1,10 @@
 {
   "devDependencies": {
-    "vitest": "^2.0.5"
+    "vitest": "^2.0.5",
+    "@vitest/coverage-v8": "^2.1.9"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "npx vitest run",
+    "test:coverage": "npx vitest run --coverage"
   }
 }

@@ -1,9 +1,10 @@
 {"name": "create-subatom",
-  "version": "0.10.9",
+  "version": "0.11.9",
   "amendment": "0.0.6",
   "description": "CLI tool of subatom framework.",
   "type": "module",
   "main": "./dist/bin/create.js",
+  "homepage": "https://subatomjs.dev",
   "bin": {
     "create-subatom": "./dist/bin/create.js"
   },
@@ -38,7 +39,7 @@
     "pre-publish": "npm run test:e2e && npm run test:unit-coverage && npm run lint:fix && npm run build",
     "dev": "tsx src/bin/create.ts",
     "prepublishOnly": "npm run build",
-    "test": "npx vitest run --coverage",
+    "test": "rm -rf coverage && npx vitest run --coverage",
     "test:e2e": "node tests/e2e/run-e2e.mjs",
     "lint": "biome lint src tests",
     "lint:fix": "biome lint --write src tests",

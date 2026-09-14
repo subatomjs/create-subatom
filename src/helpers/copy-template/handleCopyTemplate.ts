@@ -5,6 +5,7 @@ import {
   dotEnvFileContent,
   GIT_IGNORE_CONTENT,
   mainFileContent,
+  readmeFileGenerator,
   serverFileContent,
   subatomConfigContent,
   TEMPLATES_DIR,
@@ -21,6 +22,7 @@ import drizzleConfigHandler from "../../utils/drizzle/drizzleConfigHandler.js";
 import redisConfigHandler from "../../utils/redis/redisConfigHandler.js";
 import { setupEslint } from "../eslint/setupEslint.js";
 import socketConfigHandler from "../../utils/websocket/socketConfigHandler.js";
+import vitestConfigHandler from "../../utils/vitest/vitestConfigHandler.js";
 
 async function handleCopyTemplate(
   config: ProjectConfig,
@@ -253,7 +255,14 @@ async function handleCopyTemplate(
     "utf-8",
   );
 
-  //! 13. Post-copy feature handlers
+  //! 13. Generate Readme.md file
+  await fs.outputFile(
+    path.join(resolvedTargetDir, "README.md"),
+    readmeFileGenerator(config),
+    "utf-8",
+  );
+
+  //! 14. Post-copy feature handlers
   if (config.useRedis) {
     await redisConfigHandler(resolvedTargetDir, config.language);
   }
@@ -264,6 +273,9 @@ async function handleCopyTemplate(
 
   if (config.useEslint) {
     await setupEslint(config, resolvedTargetDir);
+  }
+  if (config.useVitest) {
+    await vitestConfigHandler(resolvedTargetDir, config.language);
   }
 
   // Every filesystem operation and configuration handler has been awaited
