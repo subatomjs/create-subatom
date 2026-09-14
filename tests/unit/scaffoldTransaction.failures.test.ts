@@ -90,6 +90,33 @@ describe("scaffold transaction defensive branches", () => {
     ).rejects.toThrow("Target is not a directory");
   });
 
+  it("commits successfully and removes the backup for an existing target", async () => {
+    lstat.mockResolvedValueOnce(directory()).mockResolvedValueOnce(directory());
+
+    const { withScaffoldTransaction } =
+      await import("../../src/helpers/scaffoldTransaction.js");
+
+    await withScaffoldTransaction("/tmp/project", async () => undefined);
+
+    expect(rename).toHaveBeenNthCalledWith(
+      1,
+      "/tmp/project",
+      expect.stringContaining(".project.backup-"),
+    );
+    expect(rename).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining(".project.staging-"),
+      "/tmp/project",
+    );
+    expect(rm).toHaveBeenCalledWith(
+      expect.stringContaining(".project.backup-"),
+      {
+        recursive: true,
+        force: true,
+      },
+    );
+  });
+
   it("wraps target metadata failures during commit", async () => {
     lstat
       .mockResolvedValueOnce(directory())
@@ -104,17 +131,20 @@ describe("scaffold transaction defensive branches", () => {
     ).rejects.toThrow("Project initialization failed.");
   });
 
-  it("attempts restoration when commit fails after moving the target", async () => {
+  it("attempts restoration when commit fails after moving the target and succeeds", async () => {
     lstat.mockResolvedValueOnce(directory()).mockResolvedValueOnce(directory());
     rename
       .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new Error("commit denied"));
+      .mockRejectedValueOnce(new Error("commit denied"))
+      .mockResolvedValueOnce(undefined);
+
     const { withScaffoldTransaction } =
       await import("../../src/helpers/scaffoldTransaction.js");
 
     await expect(
       withScaffoldTransaction("/tmp/project", async () => undefined),
     ).rejects.toThrow("Project initialization failed.");
+
     expect(rename).toHaveBeenLastCalledWith(
       expect.stringContaining(".project.backup-"),
       "/tmp/project",
@@ -127,6 +157,7 @@ describe("scaffold transaction defensive branches", () => {
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error("commit denied"))
       .mockRejectedValueOnce(new Error("restore denied"));
+
     const { withScaffoldTransaction } =
       await import("../../src/helpers/scaffoldTransaction.js");
 
@@ -135,31 +166,50 @@ describe("scaffold transaction defensive branches", () => {
     ).rejects.toThrow("Project initialization failed.");
   });
 
-  it("restores backup and rethrows existing ScaffoldTransactionError", async () => {
-    const { withScaffoldTransaction, ScaffoldTransactionError } =
-      await import("../../src/helpers/scaffoldTransaction.js");
+  it("restores backup and re-throws when commit fails with ScaffoldTransactionError", async () => {
+    const mod = await import("../../src/helpers/scaffoldTransaction.js");
 
-    // 1. prepareStage -> lstat targetDir
-    lstat.mockResolvedValueOnce(directory());
-    // 2. withScaffoldTransaction -> check targetExists
-    lstat.mockResolvedValueOnce(directory());
+    lstat
+      .mockResolvedValueOnce(directory())
+      .mockResolvedValueOnce(directory());
 
-    // rename calls in order:
-    // 1. rename(targetDir, backupDir) -> succeeds (targetMoved = true)
-    // 2. rename(stageDir, targetDir) -> fails with ScaffoldTransactionError
-    // 3. rename(backupDir, targetDir) in catch block -> succeeds
     rename
       .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new ScaffoldTransactionError("custom failure"))
+      .mockRejectedValueOnce(new mod.ScaffoldTransactionError("custom commit error"))
       .mockResolvedValueOnce(undefined);
 
     await expect(
-      withScaffoldTransaction("/tmp/project", async () => undefined),
-    ).rejects.toThrow("custom failure");
+      mod.withScaffoldTransaction("/tmp/project", async () => undefined),
+    ).rejects.toThrow("custom commit error");
 
     expect(rename).toHaveBeenLastCalledWith(
       expect.stringContaining(".project.backup-"),
       "/tmp/project",
     );
+  });
+
+  it("re-throws when action fails directly with ScaffoldTransactionError before move", async () => {
+    lstat.mockResolvedValueOnce(directory());
+    const mod = await import("../../src/helpers/scaffoldTransaction.js");
+
+    await expect(
+      mod.withScaffoldTransaction("/tmp/project", async () => {
+        throw new mod.ScaffoldTransactionError("action aborted");
+      }),
+    ).rejects.toThrow("action aborted");
+  });
+
+  it("re-throws ScaffoldTransactionError when commit rename fails after move", async () => {
+    lstat.mockResolvedValueOnce(directory()).mockResolvedValueOnce(directory());
+    const mod = await import("../../src/helpers/scaffoldTransaction.js");
+
+    rename
+      .mockResolvedValueOnce(undefined) // target -> backup
+      .mockRejectedValueOnce(new mod.ScaffoldTransactionError("commit aborted")) // stage -> target
+      .mockResolvedValueOnce(undefined); // backup -> target
+
+    await expect(
+      mod.withScaffoldTransaction("/tmp/project", async () => undefined),
+    ).rejects.toThrow("commit aborted");
   });
 });

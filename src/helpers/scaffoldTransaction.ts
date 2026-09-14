@@ -19,7 +19,10 @@ function transactionPath(targetDir: string, suffix: string): string {
   return path.join(parent, `.${name}.${suffix}-${randomUUID()}`);
 }
 
-async function prepareStage(targetDir: string, stageDir: string): Promise<void> {
+async function prepareStage(
+  targetDir: string,
+  stageDir: string,
+): Promise<void> {
   try {
     const targetStat = await lstat(targetDir);
     if (targetStat.isSymbolicLink()) {
@@ -28,7 +31,9 @@ async function prepareStage(targetDir: string, stageDir: string): Promise<void> 
       );
     }
     if (!targetStat.isDirectory()) {
-      throw new ScaffoldTransactionError(`Target is not a directory: ${targetDir}`);
+      throw new ScaffoldTransactionError(
+        `Target is not a directory: ${targetDir}`,
+      );
     }
 
     await cp(targetDir, stageDir, {
@@ -56,8 +61,6 @@ export async function withScaffoldTransaction<T>(
     await prepareStage(targetDir, stageDir);
     const result = await action(stageDir);
 
-    // If scaffolding directly into the active working directory (e.g. `npm create subatom .`),
-    // copy contents into targetDir rather than renaming it so VS Code's watcher inode stays intact.
     if (isCurrentDir) {
       await cp(stageDir, targetDir, {
         recursive: true,
@@ -71,7 +74,8 @@ export async function withScaffoldTransaction<T>(
     try {
       await lstat(targetDir);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") targetExists = false;
+      if ((error as NodeJS.ErrnoException).code === "ENOENT")
+        targetExists = false;
       else throw error;
     }
 
@@ -86,9 +90,14 @@ export async function withScaffoldTransaction<T>(
     await rm(stageDir, { recursive: true, force: true });
     if (targetMoved) {
       await rm(targetDir, { recursive: true, force: true });
-      await rename(backupDir, targetDir).catch(() => undefined);
+      try {
+        await rename(backupDir, targetDir);
+      } catch {
+        // Suppress restoration failure
+      }
     }
-    if (error instanceof ScaffoldTransactionError) throw error;
-    throw new ScaffoldTransactionError("Project initialization failed.", error);
+    throw error instanceof ScaffoldTransactionError
+      ? error
+      : new ScaffoldTransactionError("Project initialization failed.", error);
   }
 }

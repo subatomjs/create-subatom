@@ -1,6 +1,6 @@
 {"name": "create-subatom",
   "version": "0.10.9",
-  "amendment": "0.0.4",
+  "amendment": "0.0.6",
   "description": "CLI tool of subatom framework.",
   "type": "module",
   "main": "./dist/bin/create.js",
