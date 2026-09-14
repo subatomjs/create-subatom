@@ -23,30 +23,75 @@ async function handleCopyTemplate(
   config: ProjectConfig,
   targetDir: string,
 ): Promise<void> {
-  // 1. Resolve targetDir to an absolute path so VS Code's watcher and child processes track it properly
-  const resolvedTargetDir = path.resolve(process.cwd(), targetDir);
+  // Resolve the target directory once so every operation works against
+  // exactly the same absolute path.
+  const resolvedTargetDir = path.resolve(targetDir);
+
+  // Ensure the project root exists before creating any nested files.
   await fs.ensureDir(resolvedTargetDir);
 
-  // 2. Base language template
-  const required_template =
+  //! 1. Create scripts directory
+  const scriptDirectory = path.join(resolvedTargetDir, "scripts");
+  await fs.ensureDir(scriptDirectory);
+
+  //! 2. Setup environment requirements and Subatom config
+  const setupEnvFileName =
+    config.language === "js" ? "setup.env.js" : "setup.env.ts";
+
+  // Base environment variables guaranteed for all configurations.
+  const baseEnvLines: string[] = [
+    "PORT=8080",
+    "HOST=localhost",
+    "NODE_ENV=development",
+  ];
+
+  if (config.useRedis) {
+    baseEnvLines.push("REDIS_URL=redis://localhost:6379");
+  }
+
+  // Write these files sequentially. This avoids unnecessary bursts of
+  // filesystem events while scaffolding a project.
+  await fs.outputFile(
+    path.join(scriptDirectory, setupEnvFileName),
+    dotEnvFileContent(),
+    "utf-8",
+  );
+
+  await fs.outputFile(
+    path.join(resolvedTargetDir, ".env.requirements"),
+    `${baseEnvLines.join("\n")}\n`,
+    "utf-8",
+  );
+
+  await fs.outputFile(
+    path.join(
+      resolvedTargetDir,
+      config.language === "js" ? "subatom.config.js" : "subatom.config.ts",
+    ),
+    subatomConfigContent(config.language),
+    "utf-8",
+  );
+
+  //! 3. Copy base language template
+  const requiredTemplate =
     config.language === "ts" ? "template_ts" : "template_js";
 
   await handleCopyIfExists(
-    path.join(TEMPLATES_DIR, required_template),
+    path.join(TEMPLATES_DIR, requiredTemplate),
     resolvedTargetDir,
-    required_template,
+    requiredTemplate,
   );
 
-  // 3. Handle ORM templates sequentially to prevent destination write races
+  //! 4. Handle ORM templates
   const hasOrm = config.orm !== "none";
 
   if (hasOrm) {
-    const required_orm_directory = `orm/${config.orm}/base`;
+    const requiredOrmDirectory = `orm/${config.orm}/base`;
 
     await handleCopyIfExists(
       path.join(TEMPLATES_DIR, "orm", config.orm, "base"),
       resolvedTargetDir,
-      required_orm_directory,
+      requiredOrmDirectory,
     );
 
     if (config.orm !== "mongoose" && config.database !== "none") {
@@ -58,7 +103,7 @@ async function handleCopyTemplate(
     }
   }
 
-  // 4. Optional feature templates (executed sequentially)
+  //! 5. Optional feature templates
   if (config.useRedis) {
     await handleCopyIfExists(
       path.join(TEMPLATES_DIR, "redis"),
@@ -83,7 +128,7 @@ async function handleCopyTemplate(
     );
   }
 
-  // 5. Execute ORM-specific configuration handlers
+  //! 6. Execute ORM-specific configuration handlers
   switch (config.orm) {
     case "prisma": {
       await prismaConfigHandler(
@@ -95,12 +140,15 @@ async function handleCopyTemplate(
         config.useSocket,
       );
 
-      const required_orm_directory = `orm/${config.orm}/base`;
-      const prisma_snippet_file = path.join(
+      const requiredOrmDirectory = `orm/${config.orm}/base`;
+
+      const prismaSnippetFile = path.join(
         resolvedTargetDir,
-        `package.snippet.${slugify(required_orm_directory)}.json`,
+        `package.snippet.${slugify(requiredOrmDirectory)}.json`,
       );
-      await handlePackageSnippetUpdate(prisma_snippet_file, config.language);
+
+      await handlePackageSnippetUpdate(prismaSnippetFile, config.language);
+
       break;
     }
 
@@ -135,46 +183,11 @@ async function handleCopyTemplate(
     }
   }
 
-  // 6. Setup environment files, scripts, and subatom.config after templates are in place
-  const script_directory = path.join(resolvedTargetDir, "scripts");
-  await fs.ensureDir(script_directory);
-
-  const copy_env_requirements_config_file =
-    config.language === "js" ? "setup.env.js" : "setup.env.ts";
-
-  const baseEnvLines: string[] = [
-    "PORT=8080",
-    "HOST=localhost",
-    "NODE_ENV=development",
-  ];
-
-  if (config.useRedis) {
-    baseEnvLines.push("REDIS_URL=redis://localhost:6379");
-  }
-
-  await Promise.all([
-    fs.outputFile(
-      path.join(script_directory, copy_env_requirements_config_file),
-      dotEnvFileContent(),
-      "utf-8",
-    ),
-    fs.outputFile(
-      path.join(resolvedTargetDir, ".env.requirements"),
-      `${baseEnvLines.join("\n")}\n`,
-      "utf-8",
-    ),
-    fs.outputFile(
-      path.join(
-        resolvedTargetDir,
-        config.language === "js" ? "subatom.config.js" : "subatom.config.ts",
-      ),
-      subatomConfigContent(config.language),
-      "utf-8",
-    ),
-  ]);
-
-  // 7. Generate main entry file
+  //! 7. Generate main entry file
+  // This intentionally runs after templates so the generated entry point
+  // always wins over any template-provided version.
   const mainFileName = config.language === "ts" ? "main.ts" : "main.js";
+
   await fs.outputFile(
     path.join(resolvedTargetDir, mainFileName),
     mainFileContent(
@@ -187,24 +200,26 @@ async function handleCopyTemplate(
     "utf-8",
   );
 
-  // 8. Create dynamic server file
+  //! 8. Generate dynamic server file
   const serverFileName = config.language === "ts" ? "server.ts" : "server.js";
+
   await fs.outputFile(
     path.join(resolvedTargetDir, "src", serverFileName),
     serverFileContent(config.useSocket, config.language),
     "utf-8",
   );
 
-  // 9. Create user router file
+  //! 9. Generate user router file
   const userRouterFileName =
     config.language === "ts" ? "user.route.ts" : "user.route.js";
+
   await fs.outputFile(
     path.join(resolvedTargetDir, "src", "routes", userRouterFileName),
     userRouterFileContent(config.language),
     "utf-8",
   );
 
-  // 10. Post-copy feature handlers
+  //! 10. Post-copy feature handlers
   if (config.useRedis) {
     await redisConfigHandler(resolvedTargetDir, config.language);
   }
@@ -216,6 +231,11 @@ async function handleCopyTemplate(
   if (config.useEslint) {
     await setupEslint(config, resolvedTargetDir);
   }
+
+  // Every filesystem operation and configuration handler has been awaited
+  // before this function returns. This is important for callers that
+  // immediately continue with package installation, Git initialization,
+  // or process termination.
 }
 
 export default handleCopyTemplate;
