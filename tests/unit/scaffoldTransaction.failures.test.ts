@@ -135,14 +135,23 @@ describe("scaffold transaction defensive branches", () => {
     ).rejects.toThrow("Project initialization failed.");
   });
 
-  it("restores backup and rethrows when error is already a ScaffoldTransactionError", async () => {
+  it("restores backup and rethrows existing ScaffoldTransactionError", async () => {
     const { withScaffoldTransaction, ScaffoldTransactionError } =
       await import("../../src/helpers/scaffoldTransaction.js");
 
-    lstat.mockResolvedValueOnce(directory()).mockResolvedValueOnce(directory());
+    // 1. prepareStage -> lstat targetDir
+    lstat.mockResolvedValueOnce(directory());
+    // 2. withScaffoldTransaction -> check targetExists
+    lstat.mockResolvedValueOnce(directory());
+
+    // rename calls in order:
+    // 1. rename(targetDir, backupDir) -> succeeds (targetMoved = true)
+    // 2. rename(stageDir, targetDir) -> fails with ScaffoldTransactionError
+    // 3. rename(backupDir, targetDir) in catch block -> succeeds
     rename
       .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new ScaffoldTransactionError("custom failure"));
+      .mockRejectedValueOnce(new ScaffoldTransactionError("custom failure"))
+      .mockResolvedValueOnce(undefined);
 
     await expect(
       withScaffoldTransaction("/tmp/project", async () => undefined),
