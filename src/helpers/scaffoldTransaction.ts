@@ -13,8 +13,9 @@ export class ScaffoldTransactionError extends Error {
 }
 
 function transactionPath(targetDir: string, suffix: string): string {
-  const parent = path.dirname(targetDir);
-  const name = path.basename(targetDir);
+  const resolved = path.resolve(targetDir);
+  const parent = path.dirname(resolved);
+  const name = path.basename(resolved);
   return path.join(parent, `.${name}.${suffix}-${randomUUID()}`);
 }
 
@@ -46,6 +47,7 @@ export async function withScaffoldTransaction<T>(
   targetDir: string,
   action: (stagedDir: string) => Promise<T>,
 ): Promise<T> {
+  const isCurrentDir = path.resolve(targetDir) === process.cwd();
   const stageDir = transactionPath(targetDir, "staging");
   const backupDir = transactionPath(targetDir, "backup");
   let targetMoved = false;
@@ -53,6 +55,17 @@ export async function withScaffoldTransaction<T>(
   try {
     await prepareStage(targetDir, stageDir);
     const result = await action(stageDir);
+
+    // If scaffolding directly into the active working directory (e.g. `npm create subatom .`),
+    // copy contents into targetDir rather than renaming it so VS Code's watcher inode stays intact.
+    if (isCurrentDir) {
+      await cp(stageDir, targetDir, {
+        recursive: true,
+        force: true,
+      });
+      await rm(stageDir, { recursive: true, force: true });
+      return result;
+    }
 
     let targetExists = true;
     try {

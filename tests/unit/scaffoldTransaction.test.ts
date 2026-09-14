@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -45,5 +47,22 @@ describe("withScaffoldTransaction", () => {
 
     await expect(readFile(path.join(target, "existing.txt"), "utf8")).resolves.toBe("keep");
     await expect(readFile(path.join(target, "partial.txt"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("commits files in-place without renaming when target is the current working directory", async () => {
+    const parent = await mkdtemp(path.join(os.tmpdir(), "subatom-transaction-cwd-"));
+    temporaryDirectories.push(parent);
+    const originalCwd = process.cwd();
+
+    try {
+      process.chdir(parent);
+      await withScaffoldTransaction(".", async (stagedDir) => {
+        await writeFile(path.join(stagedDir, "cwd-file.txt"), "hello");
+      });
+
+      await expect(readFile(path.join(parent, "cwd-file.txt"), "utf8")).resolves.toBe("hello");
+    } finally {
+      process.chdir(originalCwd);
+    }
   });
 });
