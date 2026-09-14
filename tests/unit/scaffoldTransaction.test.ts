@@ -13,13 +13,17 @@ const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
   await Promise.all(
-    temporaryDirectories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })),
+    temporaryDirectories
+      .splice(0)
+      .map((directory) => rm(directory, { recursive: true, force: true })),
   );
 });
 
 describe("withScaffoldTransaction", () => {
   it("commits a new project directory", async () => {
-    const parent = await mkdtemp(path.join(os.tmpdir(), "subatom-transaction-"));
+    const parent = await mkdtemp(
+      path.join(os.tmpdir(), "subatom-transaction-"),
+    );
     temporaryDirectories.push(parent);
     const target = path.join(parent, "project");
 
@@ -27,11 +31,15 @@ describe("withScaffoldTransaction", () => {
       await writeFile(path.join(stagedDir, "generated.txt"), "generated");
     });
 
-    await expect(readFile(path.join(target, "generated.txt"), "utf8")).resolves.toBe("generated");
+    await expect(
+      readFile(path.join(target, "generated.txt"), "utf8"),
+    ).resolves.toBe("generated");
   });
 
   it("restores an existing project when initialization fails", async () => {
-    const parent = await mkdtemp(path.join(os.tmpdir(), "subatom-transaction-"));
+    const parent = await mkdtemp(
+      path.join(os.tmpdir(), "subatom-transaction-"),
+    );
     temporaryDirectories.push(parent);
     const target = path.join(parent, "project");
     await rm(target, { recursive: true, force: true });
@@ -45,12 +53,18 @@ describe("withScaffoldTransaction", () => {
       }),
     ).rejects.toBeInstanceOf(ScaffoldTransactionError);
 
-    await expect(readFile(path.join(target, "existing.txt"), "utf8")).resolves.toBe("keep");
-    await expect(readFile(path.join(target, "partial.txt"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(
+      readFile(path.join(target, "existing.txt"), "utf8"),
+    ).resolves.toBe("keep");
+    await expect(
+      readFile(path.join(target, "partial.txt"), "utf8"),
+    ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("commits files in-place without renaming when target is the current working directory", async () => {
-    const parent = await mkdtemp(path.join(os.tmpdir(), "subatom-transaction-cwd-"));
+    const parent = await mkdtemp(
+      path.join(os.tmpdir(), "subatom-transaction-cwd-"),
+    );
     temporaryDirectories.push(parent);
     const originalCwd = process.cwd();
 
@@ -60,7 +74,9 @@ describe("withScaffoldTransaction", () => {
         await writeFile(path.join(stagedDir, "cwd-file.txt"), "hello");
       });
 
-      await expect(readFile(path.join(parent, "cwd-file.txt"), "utf8")).resolves.toBe("hello");
+      await expect(
+        readFile(path.join(parent, "cwd-file.txt"), "utf8"),
+      ).resolves.toBe("hello");
     } finally {
       process.chdir(originalCwd);
     }

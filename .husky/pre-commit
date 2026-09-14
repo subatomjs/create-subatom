@@ -8,4 +8,4 @@ echo "Running local linter..."
 npm run lint
 
 echo "Running unit tests..."
-npm run test:unit-coverage
+npm run test

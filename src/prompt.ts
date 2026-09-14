@@ -13,7 +13,7 @@ export async function runPrompts(
       { value: "ts", label: "TypeScript" },
       { value: "js", label: "JavaScript" },
     ],
-  });
+  }) as Language | symbol;
   exitOnCancel(language);
 
   // 2. ORM
@@ -25,7 +25,7 @@ export async function runPrompts(
       { value: "mongoose", label: "Mongoose" },
       { value: "none", label: "None" },
     ],
-  });
+  }) as Orm | symbol;
   exitOnCancel(orm);
 
   // 3. Database (Derived or Conditional)
@@ -45,7 +45,7 @@ export async function runPrompts(
       ],
     });
     exitOnCancel(selectedDatabase);
-    database = selectedDatabase;
+    database = selectedDatabase as Exclude<Database, "none" | "mongodb">;
   } else {
     // orm === "none": Ask if they want a raw driver or no database at all
     const selectedDatabase = await select<Database>({
@@ -59,7 +59,7 @@ export async function runPrompts(
       ],
     });
     exitOnCancel(selectedDatabase);
-    database = selectedDatabase;
+    database = selectedDatabase as Exclude<Database, "none" | "mongodb">;
   }
 
   // 4. Redis
@@ -95,10 +95,10 @@ export async function runPrompts(
     language,
     database,
     orm,
-    useRedis,
-    useEslint,
-    useVitest,
-    useSocket,
+    useRedis: useRedis as boolean,
+    useEslint: useEslint as boolean,
+    useVitest: useVitest as boolean,
+    useSocket: useSocket as boolean,
   };
 }
 
@@ -116,7 +116,7 @@ async function promptProjectName(): Promise<string> {
     },
   });
   exitOnCancel(name);
-  return name;
+  return name as string;
 }
 
 function exitOnCancel<T>(value: T | symbol): asserts value is T {

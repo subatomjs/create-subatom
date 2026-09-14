@@ -3,11 +3,14 @@ import path from "node:path";
 import type { ProjectConfig } from "../../types.js";
 import {
   dotEnvFileContent,
+  GIT_IGNORE_CONTENT,
   mainFileContent,
   serverFileContent,
   subatomConfigContent,
   TEMPLATES_DIR,
+  userControllerFileContent,
   userRouterFileContent,
+  userSchemaFileContent,
 } from "../../utils/common_content.js";
 import handleCopyIfExists from "./handleCopyIfExists.js";
 import prismaConfigHandler from "../../utils/prisma/prismaConfigHandler.js";
@@ -219,7 +222,38 @@ async function handleCopyTemplate(
     "utf-8",
   );
 
-  //! 10. Post-copy feature handlers
+  //! 10. Generate user schema file
+  await fs.outputFile(
+    path.join(
+      resolvedTargetDir,
+      "src",
+      "schema",
+      `user.schema.${config.language}`,
+    ),
+    userSchemaFileContent(),
+    "utf-8",
+  );
+
+  //! 11. Generate user controller file
+  await fs.outputFile(
+    path.join(
+      resolvedTargetDir,
+      "src",
+      "controllers",
+      `user.controller.${config.language}`,
+    ),
+    userControllerFileContent(config.language),
+    "utf-8",
+  );
+
+  //! 12. Generate .gitignore file
+  await fs.outputFile(
+    path.join(resolvedTargetDir, ".gitignore"),
+    GIT_IGNORE_CONTENT,
+    "utf-8",
+  );
+
+  //! 13. Post-copy feature handlers
   if (config.useRedis) {
     await redisConfigHandler(resolvedTargetDir, config.language);
   }

@@ -372,73 +372,187 @@ export default server;`;
   }
 }
 
+// src/user.routes.ts || src/user.routes.ts
 function userRouterFileContent(language: "ts" | "js"): string {
-  if (language === "ts") {
-    return `import {
-  uuid,
-  type IController,
-  type IRouter,
-  Router,
-  file,
-  IRouteMiddleware,
-} from "subatom";
-import { infer } from "subatom-infer";
+ if(language === "ts"){
+  return `import { type IRouter, Router, file, type IRouteMiddleware } from "subatom";
+import {
+  createUserSchema,
+  listUsersSchema,
+  updateUserSchema,
+  userIdParamSchema,
+} from "../schema/user.schema.js";
+import {
+  createUserController,
+  deleteUserController,
+  getUserByIdController,
+  listUsersController,
+  updateUserController,
+} from "../controllers/user.controller.js";
 
 // ==========================================
-// 1. DATA MODEL & IN-MEMORY MOCK DATABASE
+//  USERS ROUTER SETUP
 // ==========================================
 
-export interface IUser {
-  id: string;
-  userName: string;
-  emailId: string;
-  fullName: string;
-  age: number;
-  avatar?: string | null;
+const userRouter: IRouter = new Router();
+
+// Reusable single file upload middleware
+const avatarUpload = file.single("avatar", {
+  storage: "memory",
+  allowedMimeTypes: ["image/webp", "image/jpeg", "image/png"],
+});
+
+// Method 1: Create a new user with optional avatar upload
+userRouter.post("/users", {
+  name: "users.create",
+  tags: ["Users"],
+  schema: createUserSchema,
+  middleware: [avatarUpload as unknown as IRouteMiddleware],
+  controller: createUserController,
+});
+
+// Method 2: List all users with pagination and search
+userRouter.get("/users", {
+  name: "users.list",
+  tags: ["Users"],
+  schema: listUsersSchema,
+  controller: listUsersController,
+});
+
+// Method 3: Fetch a single user by UUID
+userRouter.get("/users/:id", {
+  name: "users.get_by_id",
+  tags: ["Users"],
+  schema: userIdParamSchema,
+  controller: getUserByIdController,
+});
+
+// Method 4: Update user (PUT)
+userRouter.put("/users/:id", {
+  name: "users.update",
+  tags: ["Users"],
+  schema: updateUserSchema,
+  middleware: [avatarUpload as unknown as IRouteMiddleware],
+  controller: updateUserController,
+});
+
+// Method 5: Edit user (PATCH)
+userRouter.patch("/users/:id", {
+  name: "users.edit",
+  tags: ["Users"],
+  schema: updateUserSchema,
+  middleware: [avatarUpload as unknown as IRouteMiddleware],
+  controller: updateUserController,
+});
+
+// Method 6: Remove user
+userRouter.delete("/users/:id", {
+  name: "users.delete",
+  tags: ["Users"],
+  schema: userIdParamSchema,
+  controller: deleteUserController,
+});
+
+export default userRouter;
+`
+ }else{
+  return `import { Router, file } from "subatom";
+import {
+  createUserSchema,
+  listUsersSchema,
+  updateUserSchema,
+  userIdParamSchema,
+} from "../schema/user.schema";
+import {
+  createUserController,
+  deleteUserController,
+  getUserByIdController,
+  listUsersController,
+  updateUserController,
+} from "../controllers/user.controller";
+
+// ==========================================
+//  ROUTER SETUP
+// ==========================================
+
+const userRouter = new Router();
+
+// Reusable single file upload middleware
+const avatarUpload = file.single("avatar", {
+  storage: "memory",
+  allowedMimeTypes: ["image/webp", "image/jpeg", "image/png"],
+});
+
+// Method 1: Create a new user with optional avatar upload
+userRouter.post("/users", {
+  name: "users.create",
+  tags: ["Users"],
+  schema: createUserSchema,
+  middleware: [avatarUpload],
+  controller: createUserController,
+});
+
+// Method 2: List all users with pagination and search
+userRouter.get("/users", {
+  name: "users.list",
+  tags: ["Users"],
+  schema: listUsersSchema,
+  controller: listUsersController,
+});
+
+// Method 3: Fetch a single user by UUID
+userRouter.get("/users/:id", {
+  name: "users.get_by_id",
+  tags: ["Users"],
+  schema: userIdParamSchema,
+  controller: getUserByIdController,
+});
+
+// Method 4: Update user (PUT)
+userRouter.put("/users/:id", {
+  name: "users.update",
+  tags: ["Users"],
+  schema: updateUserSchema,
+  middleware: [avatarUpload],
+  controller: updateUserController,
+});
+
+// Method 5: Edit user (PATCH)
+userRouter.patch("/users/:id", {
+  name: "users.edit",
+  tags: ["Users"],
+  schema: updateUserSchema,
+  middleware: [avatarUpload],
+  controller: updateUserController,
+});
+
+// Method 6: Remove user
+userRouter.delete("/users/:id", {
+  name: "users.delete",
+  tags: ["Users"],
+  schema: userIdParamSchema,
+  controller: deleteUserController,
+});
+
+export default userRouter;
+`
+ }
 }
 
-// In-memory mock database for instant testing without an external DB
-export const USERS_DB: IUser[] = [
-  {
-    id: "41434843-5e34-454b-82b8-57426e126556",
-    userName: "kunal_14",
-    emailId: "kunal@subatomjs.dev",
-    fullName: "Kunal Chandra Das",
-    age: 24,
-    avatar: null,
-  },
-  {
-    id: "51434843-5e34-454b-82b8-57426e126553",
-    userName: "souvik_26",
-    emailId: "souvik@gmail.com",
-    fullName: "Souvik Sikder",
-    age: 26,
-    avatar: null,
-  },
-  {
-    id: "11434843-5e34-454b-82b8-57426e126454",
-    userName: "akash_26",
-    emailId: "akash@gmail.com",
-    fullName: "Akash Saha",
-    age: 26,
-    avatar: null,
-  },
-  {
-    id: "89434843-5e34-454b-82b8-57426d126404",
-    userName: "soubhadra_26",
-    emailId: "soubhadra_26@gmail.com",
-    fullName: "Soubhadra Mondal",
-    age: 26,
-    avatar: null,
-  },
-];
+// src/user.schema.ts || src/user.schema.ts
+function userSchemaFileContent():string {
+  return `import infer from "subatom-infer";
+
+
 
 // ==========================================
-// 2. VALIDATION SCHEMAS (subatom-infer)
+//  USERS SCHEMA SETUP
 // ==========================================
+
+
 
 // Validates POST /users
-export const createUserSchema = {
+const createUserSchema = {
   body: {
     userName: infer.string().min(3),
     emailId: infer.string().email(),
@@ -454,7 +568,7 @@ export const createUserSchema = {
 };
 
 // Validates GET /users (Query filtering and pagination)
-export const listUsersSchema = {
+const listUsersSchema = {
   query: {
     search: infer.string().optional(),
     page: infer.number().int().min(1).default(1).optional(),
@@ -463,14 +577,14 @@ export const listUsersSchema = {
 };
 
 // Validates GET /users/:id & DELETE /users/:id
-export const userIdParamSchema = {
+const userIdParamSchema = {
   params: {
     id: infer.uuid(),
   },
 };
 
 // Validates PUT /users/:id and PATCH /users/:id
-export const updateUserSchema = {
+const updateUserSchema = {
   params: {
     id: infer.uuid(),
   },
@@ -488,9 +602,81 @@ export const updateUserSchema = {
   },
 };
 
+export {
+  createUserSchema,
+  listUsersSchema,
+  userIdParamSchema,
+  updateUserSchema,
+};
+`
+}
+
+// src/user.controller.ts || src/user.controller.ts
+function userControllerFileContent(language: "ts" | "js"):string{
+  if(language === "ts"){
+    return `import { type IController, uuid } from "subatom";
+import {
+  createUserSchema,
+  listUsersSchema,
+  updateUserSchema,
+  userIdParamSchema,
+} from "../schema/user.schema.js";
+
+
 // ==========================================
-// 3. CONTROLLERS
+//  USER TYPE INTERFACE
 // ==========================================
+
+export interface IUser {
+  id: string;
+  userName: string;
+  emailId: string;
+  fullName: string;
+  age: number;
+  avatar?: string | null;
+}
+
+
+// ==========================================
+//  USERS CONTROLLERS SETUP
+// ==========================================
+
+
+// In-memory mock database for instant testing without an external DB
+export const USERS_DB: IUser[] = [
+  {
+    id: "7f3a8c21-6d45-4b92-a1e7-93c5f8d21460",
+    userName: "alex_21",
+    emailId: "alex@example.com",
+    fullName: "Alex Morgan",
+    age: 21,
+    avatar: null,
+  },
+  {
+    id: "2b91e547-83c6-4a15-b729-61f4d8e20395",
+    userName: "emma_25",
+    emailId: "emma@example.com",
+    fullName: "Emma Wilson",
+    age: 25,
+    avatar: null,
+  },
+  {
+    id: "c64e1298-5f73-4d21-8ab6-37e9c4521068",
+    userName: "liam_28",
+    emailId: "liam@example.com",
+    fullName: "Liam Anderson",
+    age: 28,
+    avatar: null,
+  },
+  {
+    id: "9a27f531-4c68-42de-b815-76f3e2095481",
+    userName: "olivia_23",
+    emailId: "olivia@example.com",
+    fullName: "Olivia Bennett",
+    age: 23,
+    avatar: null,
+  },
+];
 
 /**
  * 1. CREATE USER
@@ -648,183 +834,55 @@ export const deleteUserController: IController<
     message: "User '" + id + "' deleted successfully",
   });
 };
+`
+  }else{
+    return `import { uuid } from "subatom";
 
 // ==========================================
-// 4. ROUTER SETUP
-// ==========================================
-
-const userRouter: IRouter = new Router();
-
-// Reusable single file upload middleware
-const avatarUpload = file.single("avatar", {
-  storage: "memory",
-  allowedMimeTypes: ["image/webp", "image/jpeg", "image/png"],
-});
-
-// Method 1: Create a new user with optional avatar upload
-userRouter.post("/users", {
-  name: "users.create",
-  tags: ["Users"],
-  schema: createUserSchema,
-  middleware: [avatarUpload as unknown as IRouteMiddleware],
-  controller: createUserController,
-});
-
-// Method 2: List all users with pagination and search
-userRouter.get("/users", {
-  name: "users.list",
-  tags: ["Users"],
-  schema: listUsersSchema,
-  controller: listUsersController,
-});
-
-// Method 3: Fetch a single user by UUID
-userRouter.get("/users/:id", {
-  name: "users.get_by_id",
-  tags: ["Users"],
-  schema: userIdParamSchema,
-  controller: getUserByIdController,
-});
-
-// Method 4: Update user (PUT)
-userRouter.put("/users/:id", {
-  name: "users.update",
-  tags: ["Users"],
-  schema: updateUserSchema,
-  middleware: [avatarUpload as unknown as IRouteMiddleware],
-  controller: updateUserController,
-});
-
-// Method 5: Edit user (PATCH)
-userRouter.patch("/users/:id", {
-  name: "users.edit",
-  tags: ["Users"],
-  schema: updateUserSchema,
-  middleware: [avatarUpload as unknown as IRouteMiddleware],
-  controller: updateUserController,
-});
-
-// Method 6: Remove user
-userRouter.delete("/users/:id", {
-  name: "users.delete",
-  tags: ["Users"],
-  schema: userIdParamSchema,
-  controller: deleteUserController,
-});
-
-export default userRouter;`;
-  } else {
-    return `import {
-  uuid,
-  Router,
-  file,
-} from "subatom";
-import { infer } from "subatom-infer";
-
-// ==========================================
-// 1. DATA MODEL & IN-MEMORY MOCK DATABASE
+//  USERS CONTROLLERS SETUP
 // ==========================================
 
 // In-memory mock database for instant testing without an external DB
 export const USERS_DB = [
   {
-    id: "41434843-5e34-454b-82b8-57426e126556",
-    userName: "kunal_14",
-    emailId: "kunal@subatomjs.dev",
-    fullName: "Kunal Chandra Das",
-    age: 24,
+    id: "7f3a8c21-6d45-4b92-a1e7-93c5f8d21460",
+    userName: "alex_21",
+    emailId: "alex@example.com",
+    fullName: "Alex Morgan",
+    age: 21,
     avatar: null,
   },
   {
-    id: "51434843-5e34-454b-82b8-57426e126553",
-    userName: "souvik_26",
-    emailId: "souvik@gmail.com",
-    fullName: "Souvik Sikder",
-    age: 26,
+    id: "2b91e547-83c6-4a15-b729-61f4d8e20395",
+    userName: "emma_25",
+    emailId: "emma@example.com",
+    fullName: "Emma Wilson",
+    age: 25,
     avatar: null,
   },
   {
-    id: "11434843-5e34-454b-82b8-57426e126454",
-    userName: "akash_26",
-    emailId: "akash@gmail.com",
-    fullName: "Akash Saha",
-    age: 26,
+    id: "c64e1298-5f73-4d21-8ab6-37e9c4521068",
+    userName: "liam_28",
+    emailId: "liam@example.com",
+    fullName: "Liam Anderson",
+    age: 28,
     avatar: null,
   },
   {
-    id: "89434843-5e34-454b-82b8-57426d126404",
-    userName: "soubhadra_26",
-    emailId: "soubhadra_26@gmail.com",
-    fullName: "Soubhadra Mondal",
-    age: 26,
+    id: "9a27f531-4c68-42de-b815-76f3e2095481",
+    userName: "olivia_23",
+    emailId: "olivia@example.com",
+    fullName: "Olivia Bennett",
+    age: 23,
     avatar: null,
   },
 ];
-
-// ==========================================
-// 2. VALIDATION SCHEMAS (subatom-infer)
-// ==========================================
-
-// Validates POST /users
-export const createUserSchema = {
-  body: {
-    userName: infer.string().min(3),
-    emailId: infer.string().email(),
-    fullName: infer.string().min(2),
-    age: infer.number().int().min(1).max(120),
-  },
-  files: {
-    avatar: infer
-      .file()
-      .max(5 * 1024 * 1024, "Max avatar file size limit is 5MB")
-      .optional(),
-  },
-};
-
-// Validates GET /users (Query filtering and pagination)
-export const listUsersSchema = {
-  query: {
-    search: infer.string().optional(),
-    page: infer.number().int().min(1).default(1).optional(),
-    limit: infer.number().int().min(1).max(100).default(10).optional(),
-  },
-};
-
-// Validates GET /users/:id & DELETE /users/:id
-export const userIdParamSchema = {
-  params: {
-    id: infer.uuid(),
-  },
-};
-
-// Validates PUT /users/:id and PATCH /users/:id
-export const updateUserSchema = {
-  params: {
-    id: infer.uuid(),
-  },
-  body: {
-    userName: infer.string().min(3).optional(),
-    emailId: infer.string().email().optional(),
-    fullName: infer.string().min(2).optional(),
-    age: infer.number().int().min(1).max(120).optional(),
-  },
-  files: {
-    avatar: infer
-      .file()
-      .max(5 * 1024 * 1024, "Max avatar file size limit is 5MB")
-      .optional(),
-  },
-};
-
-// ==========================================
-// 3. CONTROLLERS
-// ==========================================
 
 /**
  * 1. CREATE USER
  * POST /users
  */
-export const createUserController = async (ctx) => {
+export const createUserController = (ctx) => {
   const { userName, emailId, fullName, age } = ctx.body;
   const avatarFile = ctx.files?.avatar;
 
@@ -852,7 +910,7 @@ export const createUserController = async (ctx) => {
  * 2. LIST USERS (With search & pagination)
  * GET /users
  */
-export const listUsersController = async (ctx) => {
+export const listUsersController = (ctx) => {
   const search = ctx.query?.search?.toLowerCase().trim();
   const page = Number(ctx.query?.page) || 1;
   const limit = Number(ctx.query?.limit) || 10;
@@ -889,7 +947,7 @@ export const listUsersController = async (ctx) => {
  * 3. GET USER BY ID
  * GET /users/:id
  */
-export const getUserByIdController = async (ctx) => {
+export const getUserByIdController = (ctx) => {
   const { id } = ctx.params;
   const user = USERS_DB.find((u) => u.id === id);
 
@@ -910,7 +968,7 @@ export const getUserByIdController = async (ctx) => {
  * 4. UPDATE USER (Complete or Partial)
  * PUT /users/:id & PATCH /users/:id
  */
-export const updateUserController = async (ctx) => {
+export const updateUserController = (ctx) => {
   const { id } = ctx.params;
   const userIndex = USERS_DB.findIndex((u) => u.id === id);
 
@@ -948,7 +1006,7 @@ export const updateUserController = async (ctx) => {
  * 5. DELETE USER
  * DELETE /users/:id
  */
-export const deleteUserController = async (ctx) => {
+export const deleteUserController = (ctx) => {
   const { id } = ctx.params;
   const userIndex = USERS_DB.findIndex((u) => u.id === id);
 
@@ -965,75 +1023,12 @@ export const deleteUserController = async (ctx) => {
     success: true,
     message: "User '" + id + "' deleted successfully",
   });
-};
-
-// ==========================================
-// 4. ROUTER SETUP
-// ==========================================
-
-const userRouter = new Router();
-
-// Reusable single file upload middleware
-const avatarUpload = file.single("avatar", {
-  storage: "memory",
-  allowedMimeTypes: ["image/webp", "image/jpeg", "image/png"],
-});
-
-// Method 1: Create a new user with optional avatar upload
-userRouter.post("/users", {
-  name: "users.create",
-  tags: ["Users"],
-  schema: createUserSchema,
-  middleware: [avatarUpload],
-  controller: createUserController,
-});
-
-// Method 2: List all users with pagination and search
-userRouter.get("/users", {
-  name: "users.list",
-  tags: ["Users"],
-  schema: listUsersSchema,
-  controller: listUsersController,
-});
-
-// Method 3: Fetch a single user by UUID
-userRouter.get("/users/:id", {
-  name: "users.get_by_id",
-  tags: ["Users"],
-  schema: userIdParamSchema,
-  controller: getUserByIdController,
-});
-
-// Method 4: Update user (PUT)
-userRouter.put("/users/:id", {
-  name: "users.update",
-  tags: ["Users"],
-  schema: updateUserSchema,
-  middleware: [avatarUpload],
-  controller: updateUserController,
-});
-
-// Method 5: Edit user (PATCH)
-userRouter.patch("/users/:id", {
-  name: "users.edit",
-  tags: ["Users"],
-  schema: updateUserSchema,
-  middleware: [avatarUpload],
-  controller: updateUserController,
-});
-
-// Method 6: Remove user
-userRouter.delete("/users/:id", {
-  name: "users.delete",
-  tags: ["Users"],
-  schema: userIdParamSchema,
-  controller: deleteUserController,
-});
-
-export default userRouter;`;
+};`
   }
 }
 
+
+// subatom.config.ts || subatom.config.js
 function subatomConfigContent(language: Language): string {
   if (language === "js") {
     return `import { defineConfig } from "subatom";
@@ -1203,6 +1198,145 @@ export default envConfig;`;
   }
 };
 
+
+const GIT_IGNORE_CONTENT = `
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Diagnostic reports (https://nodejs.org/api/report.html)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Directory for instrumented libs generated by jscoverage/JSCover
+lib-cov
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage (https://gruntjs.com/creating-plugins#storing-task-files)
+.grunt
+
+# Bower dependency directory (https://bower.io/)
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons (https://nodejs.org/api/addons.html)
+build/Release
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Snowpack dependency directory (https://snowpack.dev/)
+web_modules/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variable files
+.env
+.env.*
+!.env.example
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+.output
+
+# Gatsby files
+.cache/
+# Comment in the public line in if your project uses Gatsby and not Next.js
+# https://nextjs.org/blog/next-9-1#public-directory-support
+# public
+
+# vuepress build output
+.vuepress/dist
+
+# vuepress v2.x temp directory
+.temp
+
+# Sveltekit cache directory
+.svelte-kit/
+
+# vitepress build output
+**/.vitepress/dist
+
+# vitepress cache directory
+**/.vitepress/cache
+
+# Docusaurus cache and generated files
+.docusaurus
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# Firebase cache directory
+.firebase/
+
+# TernJS port file
+.tern-port
+
+# Stores Visual Studio Code versions used for testing Visual Studio Code extensions
+.vscode-test
+
+# pnpm
+.pnpm-store
+
+# yarn v3
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+`
+
 export {
   subatomConfigContent,
   envConfigContentRelationalDb,
@@ -1210,7 +1344,10 @@ export {
   serverFileContent,
   dotEnvFileContent,
   userRouterFileContent,
+  userSchemaFileContent,
+  userControllerFileContent,
   TEMPLATES_DIR,
   SNIPPET_FILENAME,
   SNIPPET_PATTERN,
+  GIT_IGNORE_CONTENT
 };

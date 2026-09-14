@@ -1,15 +1,14 @@
+import { type IController, uuid } from "subatom";
 import {
-  uuid,
-  type IController,
-  type IRouter,
-  Router,
-  file,
-  IRouteMiddleware,
-} from "subatom";
-import { infer } from "subatom-infer";
+  createUserSchema,
+  listUsersSchema,
+  updateUserSchema,
+  userIdParamSchema,
+} from "../schema/user.schema.js";
+
 
 // ==========================================
-// 1. DATA MODEL & IN-MEMORY MOCK DATABASE
+//  USER TYPE INTERFACE
 // ==========================================
 
 export interface IUser {
@@ -21,100 +20,47 @@ export interface IUser {
   avatar?: string | null;
 }
 
+
+// ==========================================
+//  USERS CONTROLLERS SETUP
+// ==========================================
+
+
 // In-memory mock database for instant testing without an external DB
 export const USERS_DB: IUser[] = [
   {
-    id: "41434843-5e34-454b-82b8-57426e126556",
-    userName: "kunal_14",
-    emailId: "kunal@subatomjs.dev",
-    fullName: "Kunal Chandra Das",
-    age: 24,
+    id: "7f3a8c21-6d45-4b92-a1e7-93c5f8d21460",
+    userName: "alex_21",
+    emailId: "alex@example.com",
+    fullName: "Alex Morgan",
+    age: 21,
     avatar: null,
   },
   {
-    id: "51434843-5e34-454b-82b8-57426e126553",
-    userName: "souvik_26",
-    emailId: "souvik@gmail.com",
-    fullName: "Souvik Sikder",
-    age: 26,
+    id: "2b91e547-83c6-4a15-b729-61f4d8e20395",
+    userName: "emma_25",
+    emailId: "emma@example.com",
+    fullName: "Emma Wilson",
+    age: 25,
     avatar: null,
   },
   {
-    id: "11434843-5e34-454b-82b8-57426e126454",
-    userName: "akash_26",
-    emailId: "akash@gmail.com",
-    fullName: "Akash Saha",
-    age: 26,
+    id: "c64e1298-5f73-4d21-8ab6-37e9c4521068",
+    userName: "liam_28",
+    emailId: "liam@example.com",
+    fullName: "Liam Anderson",
+    age: 28,
     avatar: null,
   },
   {
-    id: "89434843-5e34-454b-82b8-57426d126404",
-    userName: "soubhadra_26",
-    emailId: "soubhadra_26@gmail.com",
-    fullName: "Soubhadra Mondal",
-    age: 26,
+    id: "9a27f531-4c68-42de-b815-76f3e2095481",
+    userName: "olivia_23",
+    emailId: "olivia@example.com",
+    fullName: "Olivia Bennett",
+    age: 23,
     avatar: null,
   },
 ];
-
-// ==========================================
-// 2. VALIDATION SCHEMAS (subatom-infer)
-// ==========================================
-
-// Validates POST /users
-export const createUserSchema = {
-  body: {
-    userName: infer.string().min(3),
-    emailId: infer.string().email(),
-    fullName: infer.string().min(2),
-    age: infer.number().int().min(1).max(120),
-  },
-  files: {
-    avatar: infer
-      .file()
-      .max(5 * 1024 * 1024, "Max avatar file size limit is 5MB")
-      .optional(),
-  },
-};
-
-// Validates GET /users (Query filtering and pagination)
-export const listUsersSchema = {
-  query: {
-    search: infer.string().optional(),
-    page: infer.number().int().min(1).default(1).optional(),
-    limit: infer.number().int().min(1).max(100).default(10).optional(),
-  },
-};
-
-// Validates GET /users/:id & DELETE /users/:id
-export const userIdParamSchema = {
-  params: {
-    id: infer.uuid(),
-  },
-};
-
-// Validates PUT /users/:id and PATCH /users/:id
-export const updateUserSchema = {
-  params: {
-    id: infer.uuid(),
-  },
-  body: {
-    userName: infer.string().min(3).optional(),
-    emailId: infer.string().email().optional(),
-    fullName: infer.string().min(2).optional(),
-    age: infer.number().int().min(1).max(120).optional(),
-  },
-  files: {
-    avatar: infer
-      .file()
-      .max(5 * 1024 * 1024, "Max avatar file size limit is 5MB")
-      .optional(),
-  },
-};
-
-// ==========================================
-// 3. CONTROLLERS
-// ==========================================
 
 /**
  * 1. CREATE USER
@@ -272,68 +218,3 @@ export const deleteUserController: IController<
     message: "User '" + id + "' deleted successfully",
   });
 };
-
-// ==========================================
-// 4. ROUTER SETUP
-// ==========================================
-
-const userRouter: IRouter = new Router();
-
-// Reusable single file upload middleware
-const avatarUpload = file.single("avatar", {
-  storage: "memory",
-  allowedMimeTypes: ["image/webp", "image/jpeg", "image/png"],
-});
-
-// Method 1: Create a new user with optional avatar upload
-userRouter.post("/users", {
-  name: "users.create",
-  tags: ["Users"],
-  schema: createUserSchema,
-  middleware: [avatarUpload as unknown as IRouteMiddleware],
-  controller: createUserController,
-});
-
-// Method 2: List all users with pagination and search
-userRouter.get("/users", {
-  name: "users.list",
-  tags: ["Users"],
-  schema: listUsersSchema,
-  controller: listUsersController,
-});
-
-// Method 3: Fetch a single user by UUID
-userRouter.get("/users/:id", {
-  name: "users.get_by_id",
-  tags: ["Users"],
-  schema: userIdParamSchema,
-  controller: getUserByIdController,
-});
-
-// Method 4: Update user (PUT)
-userRouter.put("/users/:id", {
-  name: "users.update",
-  tags: ["Users"],
-  schema: updateUserSchema,
-  middleware: [avatarUpload as unknown as IRouteMiddleware],
-  controller: updateUserController,
-});
-
-// Method 5: Edit user (PATCH)
-userRouter.patch("/users/:id", {
-  name: "users.edit",
-  tags: ["Users"],
-  schema: updateUserSchema,
-  middleware: [avatarUpload as unknown as IRouteMiddleware],
-  controller: updateUserController,
-});
-
-// Method 6: Remove user
-userRouter.delete("/users/:id", {
-  name: "users.delete",
-  tags: ["Users"],
-  schema: userIdParamSchema,
-  controller: deleteUserController,
-});
-
-export default userRouter;

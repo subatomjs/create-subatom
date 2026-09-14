@@ -68,7 +68,8 @@ export function initSocket(httpServer: HttpServer): SubatomPulseInstance {
     socket.join("user:" + userId);
 
     // Listen for direct messages sent to another user
-    socket.on("chat.send", (data: { to?: string; text?: string }, ack) => {
+    socket.on("chat.send", (rawData: unknown, ack) => {
+      const data = rawData as { to?: string; text?: string };
       if (!data?.to || !data?.text) {
         return ack?.({ ok: false, error: "Both 'to' and 'text' are required" });
       }
