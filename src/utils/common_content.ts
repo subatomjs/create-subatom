@@ -1465,6 +1465,7 @@ web_modules/
 # Nuxt.js build / generate output
 .nuxt
 dist
+build
 .output
 
 # Gatsby files
